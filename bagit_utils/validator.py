@@ -70,7 +70,6 @@ class BagItProfileValidator:
     ]
     _ACCEPTED_MANIFEST_ALGORITHMS = ["md5", "sha1", "sha256", "sha512"]
     _ACCEPTED_SERIALIZATION_VALUES = ["forbidden", "required", "optional"]
-    _DEFAULT_BAGIT_VERSIONS = ["1.0"]
     _ERROR_PREFIX = "BagIt-profile incompatible: "
     _ERROR_BAD_TYPE = (
         "Bad type for '{key}' (expected '{exp}' but got '{got}')."
@@ -431,19 +430,6 @@ class BagItProfileValidator:
     @classmethod
     def validate_accept_bagit_version(cls, profile: Mapping) -> None:
         """Validate 'Accept-BagIt-Version'-section of `profile`."""
-        if (
-            cls.PRINT_WARNINGS
-            and (
-                profile.get("Accept-BagIt-Version")
-                or cls._DEFAULT_BAGIT_VERSIONS
-            )
-            != cls._DEFAULT_BAGIT_VERSIONS
-        ):
-            print(
-                "WARNING Currently 'bagit-utils' only supports BagIt 1.0 (got "
-                + f"{quote_list(profile['Accept-BagIt-Version'])}).",
-                file=sys.stderr,
-            )
         if "Accept-BagIt-Version" not in profile:
             return
         cls._handle_type_validation(
@@ -905,8 +891,37 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Accept-BagIt-Version'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if "Accept-BagIt-Version" in profile:
+            if profile["Accept-BagIt-Version"] != ["1.0"]:
+                result.issues.append(
+                    Issue(
+                        "info",
+                        "This library currently only supports BagIt at version"
+                        + " '1.0'.",
+                        "Accept-BagIt-Version",
+                    )
+                )
+            bag_version = (
+                (bag.path / "bagit.txt")
+                .read_text(encoding="utf-8")
+                .splitlines()[0]
+            )
+            if not any(
+                bag_version in f"BagIt-Version: {version}"
+                for version in profile["Accept-BagIt-Version"]
+            ):
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Bad BagIt-version for bag at '{bag.path}' (got "
+                        + f"'{bag_version}' but expected one of "
+                        + f"{quote_list(profile['Accept-BagIt-Version'])}).",
+                        "Accept-BagIt-Version",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_tag_manifests_required(

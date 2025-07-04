@@ -217,7 +217,7 @@ def test_bag_validator_manifest_files(src, dst, profile, ok):
 )
 def test_bag_validator_fetch_txt_file_does_not_exist(src, dst, profile, ok):
     """Test validation for fetch.txt files."""
-    bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+    bag: Bag = create_test_bag(src, dst)
 
     assert (
         report := BagValidator.validate_once(bag, profile=profile)
@@ -239,7 +239,7 @@ def test_bag_validator_fetch_txt_file_does_not_exist(src, dst, profile, ok):
 )
 def test_bag_validator_fetch_txt_file_does_exist(src, dst, profile, ok):
     """Test validation for fetch.txt files."""
-    bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+    bag: Bag = create_test_bag(src, dst)
     (bag.path / "fetch.txt").touch()
 
     assert (
@@ -281,7 +281,35 @@ def test_bag_validator_fetch_txt_file_does_exist(src, dst, profile, ok):
 )
 def test_bag_validator_data_empty(src, dst, profile, callback, ok):
     """Test validation for data-empty."""
-    bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+    bag: Bag = create_test_bag(src, dst)
+    callback(bag)
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "callback", "ok"),
+    [
+        (
+            {"Accept-BagIt-Version": ["1.0"]},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Accept-BagIt-Version": ["0.97"]},
+            lambda bag: None,
+            False,
+        ),
+    ],
+)
+def test_bag_validator_accept_bagit_version(src, dst, profile, callback, ok):
+    """Test validation for accepted BagIt-version."""
+    bag: Bag = create_test_bag(src, dst)
     callback(bag)
 
     assert (
