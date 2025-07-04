@@ -203,3 +203,48 @@ def test_bag_validator_manifest_files(src, dst, profile, ok):
     if not ok:
         for issue in report.issues:
             print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "ok"),
+    [
+        ({}, True),
+        ({"Allow-Fetch.txt": True}, True),
+        ({"Allow-Fetch.txt": False}, True),
+        ({"Fetch.txt-Required": True}, False),
+        ({"Fetch.txt-Required": False}, True),
+    ],
+)
+def test_bag_validator_fetch_txt_file_does_not_exist(src, dst, profile, ok):
+    """Test validation for fetch.txt files."""
+    bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "ok"),
+    [
+        ({}, True),
+        ({"Allow-Fetch.txt": True}, True),
+        ({"Allow-Fetch.txt": False}, False),
+        ({"Fetch.txt-Required": True}, True),
+        ({"Fetch.txt-Required": False}, True),
+    ],
+)
+def test_bag_validator_fetch_txt_file_does_exist(src, dst, profile, ok):
+    """Test validation for fetch.txt files."""
+    bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+    (bag.path / "fetch.txt").touch()
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")

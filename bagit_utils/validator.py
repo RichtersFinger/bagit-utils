@@ -358,12 +358,6 @@ class BagItProfileValidator:
     @classmethod
     def validate_allow_fetchtxt(cls, profile: Mapping) -> None:
         """Validate 'Allow-Fetch.txt'-section of `profile`."""
-        if cls.PRINT_WARNINGS and profile.get("Allow-Fetch.txt", True):
-            print(
-                "WARNING The 'fetch.txt'-file is currently not supported "
-                + "by 'bagit-utils'.",
-                file=sys.stderr,
-            )
         if "Allow-Fetch.txt" not in profile:
             return
         cls._handle_type_validation(
@@ -373,12 +367,6 @@ class BagItProfileValidator:
     @classmethod
     def validate_fetchtxt_required(cls, profile: Mapping) -> None:
         """Validate 'Fetch.txt-Required'-section of `profile`."""
-        if cls.PRINT_WARNINGS and profile.get("Fetch.txt-Required", True):
-            print(
-                "WARNING The 'fetch.txt'-file is currently not supported "
-                + "by 'bagit-utils'.",
-                file=sys.stderr,
-            )
         if "Fetch.txt-Required" not in profile:
             return
         cls._handle_type_validation(
@@ -622,7 +610,7 @@ class BagValidator:
     add to README
     * validation of BagIt-Profile-Info skipped
     * Bag-Info items support regex
-    * no support for fetch.txt
+    * no support for fetch.txt (only validation)
     * no support for serialization
     * omitting Accept-BagIt-Version is equivalent to version 1.0
     * Payload/Tag-file-matching for 'Payload-Files-X' and 'Tag-Files-X'
@@ -786,16 +774,46 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Allow-Fetch.txt'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if "Allow-Fetch.txt" in profile:
+            result.issues.append(
+                Issue(
+                    "info", "A 'fetch.txt'-file is currently not supported."
+                )
+            )
+        allow_fetchtxt = profile.get("Allow-Fetch.txt", True)
+        if not allow_fetchtxt and (bag.path / "fetch.txt").is_file():
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error",
+                    f"File 'fetch.txt' in bag at '{bag.path}' is not allowed.",
+                )
+            )
+        return result
 
     @classmethod
     def validate_fetchtxt_required(
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Fetch.txt-Required'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if "Fetch.txt-Required" in profile:
+            result.issues.append(
+                Issue(
+                    "info", "A 'fetch.txt'-file is currently not supported."
+                )
+            )
+        fetchtxt_required = profile.get("Fetch.txt-Required", False)
+        if fetchtxt_required and not (bag.path / "fetch.txt").is_file():
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error",
+                    f"Missing file 'fetch.txt' in bag at '{bag.path}'.",
+                )
+            )
+        return result
 
     @classmethod
     def validate_data_empty(
