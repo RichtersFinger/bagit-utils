@@ -586,10 +586,12 @@ class Issue:
     Keyword arguments:
     level -- issue severity (one of 'info', 'warning', and 'error')
     message -- issue description
+    origin -- issue origin identifier
     """
 
     level: str
     message: str
+    origin: Optional[str] = None
 
 
 @dataclass
@@ -742,6 +744,7 @@ class BagValidator:
                         "error",
                         f"Missing manifest for algorithm '{method}' in bag at "
                         + f"'{bag.path}'.",
+                        "Manifests-Required",
                     )
                 )
         return result
@@ -765,6 +768,7 @@ class BagValidator:
                         "error",
                         f"Manifest file '{file.relative_to(bag.path)}' not "
                         + f"allowed in bag at '{bag.path}'.",
+                        "Manifests-Allowed",
                     )
                 )
         return result
@@ -778,16 +782,21 @@ class BagValidator:
         if "Allow-Fetch.txt" in profile:
             result.issues.append(
                 Issue(
-                    "info", "A 'fetch.txt'-file is currently not supported."
+                    "info",
+                    "A 'fetch.txt'-file is currently not supported.",
+                    "Allow-Fetch.txt",
                 )
             )
-        allow_fetchtxt = profile.get("Allow-Fetch.txt", True)
-        if not allow_fetchtxt and (bag.path / "fetch.txt").is_file():
+        if (
+            not profile.get("Allow-Fetch.txt", True)
+            and (bag.path / "fetch.txt").is_file()
+        ):
             result.valid = False
             result.issues.append(
                 Issue(
                     "error",
                     f"File 'fetch.txt' in bag at '{bag.path}' is not allowed.",
+                    "Allow-Fetch.txt",
                 )
             )
         return result
@@ -801,16 +810,21 @@ class BagValidator:
         if "Fetch.txt-Required" in profile:
             result.issues.append(
                 Issue(
-                    "info", "A 'fetch.txt'-file is currently not supported."
+                    "info",
+                    "A 'fetch.txt'-file is currently not supported.",
+                    "Fetch.txt-Required",
                 )
             )
-        fetchtxt_required = profile.get("Fetch.txt-Required", False)
-        if fetchtxt_required and not (bag.path / "fetch.txt").is_file():
+        if (
+            profile.get("Fetch.txt-Required", False)
+            and not (bag.path / "fetch.txt").is_file()
+        ):
             result.valid = False
             result.issues.append(
                 Issue(
                     "error",
                     f"Missing file 'fetch.txt' in bag at '{bag.path}'.",
+                    "Fetch.txt-Required",
                 )
             )
         return result
@@ -820,8 +834,31 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Data-Empty'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if profile.get("Data-Empty", False):
+            files = list((bag.path / "data").glob("**/*"))
+            if len(files) > 1:
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Payload of bag at '{bag.path}' must not contain more"
+                        + f" than one file (found {len(files)} files).",
+                        "Data-Empty",
+                    )
+                )
+            elif len(files) == 1 and files[0].lstat().st_size > 0:
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Payload file '{files[0].relative_to(bag.path)}' in "
+                        + f"bag at '{bag.path}' must be zero bytes "
+                        + f"(found {files[0].lstat().st_size}B).",
+                        "Data-Empty",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_serialization(

@@ -248,3 +248,45 @@ def test_bag_validator_fetch_txt_file_does_exist(src, dst, profile, ok):
     if not ok:
         for issue in report.issues:
             print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "callback", "ok"),
+    [
+        (
+            {"Data-Empty": True},
+            lambda bag: (bag.path / "data" / "payload.txt").write_bytes(b""),
+            True,
+        ),
+        (
+            {"Data-Empty": True},
+            lambda bag: (bag.path / "data" / "payload1.txt").touch(),
+            False,
+        ),
+        (
+            {"Data-Empty": True},
+            lambda bag: (bag.path / "data" / "payload.txt").write_bytes(
+                b"data"
+            ),
+            False,
+        ),
+        (
+            {"Data-Empty": False},
+            lambda bag: (bag.path / "data" / "payload.txt").write_bytes(
+                b"data"
+            ),
+            True,
+        ),
+    ],
+)
+def test_bag_validator_data_empty(src, dst, profile, callback, ok):
+    """Test validation for data-empty."""
+    bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+    callback(bag)
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")
