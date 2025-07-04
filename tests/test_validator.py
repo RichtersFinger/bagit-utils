@@ -364,3 +364,36 @@ def test_bag_validator_tag_files_required(src, dst, profile, callback, ok):
     if not ok:
         for issue in report.issues:
             print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "callback", "ok"),
+    [
+        (
+            {"Payload-Files-Required": []},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Payload-Files-Required": ["data/payload1.txt"]},
+            lambda bag: None,
+            False,
+        ),
+        (
+            {"Payload-Files-Required": ["data/payload1.txt"]},
+            lambda bag: (bag.path / "data" / "payload1.txt").touch(),
+            True,
+        ),
+    ],
+)
+def test_bag_validator_payload_files_required(src, dst, profile, callback, ok):
+    """Test validation for required payload-files."""
+    bag: Bag = create_test_bag(src, dst)
+    callback(bag)
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")

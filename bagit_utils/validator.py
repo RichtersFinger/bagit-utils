@@ -967,7 +967,8 @@ class BagValidator:
                 result.issues.append(
                     Issue(
                         "error",
-                        f"Missing required tag-file '{Path(file)}' in bag at "
+                        "Missing required tag-file "
+                        + f"'{Path(file).relative_to(bag.path)}' in bag at "
                         + f"'{bag.path}'.",
                         "Tag-Files-Required",
                     )
@@ -987,8 +988,23 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Payload-Files-Required'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if profile.get("Payload-Files-Required") is None:
+            return result
+
+        for file in map(lambda f: bag.path / f, profile["Payload-Files-Required"]):
+            if not file.is_file():
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        "Missing required payload-file "
+                        + f"'{Path(file).relative_to(bag.path)}' in bag at "
+                        + f"'{bag.path}'.",
+                        "Payload-Files-Required",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_payload_files_allowed(
