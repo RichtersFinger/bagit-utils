@@ -928,16 +928,44 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Tag-Manifests-Required'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        for method in profile.get("Tag-Manifests-Required", []):
+            if not (bag.path / f"tagmanifest-{method}.txt").is_file():
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Missing tagmanifest for algorithm '{method}' in bag"
+                        + f" at '{bag.path}'.",
+                        "Tag-Manifests-Required",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_tag_manifests_allowed(
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Tag-Manifests-Allowed'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if profile.get("Tag-Manifests-Allowed") is None:
+            return result
+
+        for file in bag.path.glob("tagmanifest-*.txt"):
+            if file.name not in map(
+                lambda m: f"tagmanifest-{m}.txt",
+                profile["Tag-Manifests-Allowed"],
+            ):
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Tag-manifest file '{file.relative_to(bag.path)}' not"
+                        + f" allowed in bag at '{bag.path}'.",
+                        "Tag-Manifests-Allowed",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_tag_files_required(

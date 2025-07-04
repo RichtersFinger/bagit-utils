@@ -318,3 +318,24 @@ def test_bag_validator_accept_bagit_version(src, dst, profile, callback, ok):
     if not ok:
         for issue in report.issues:
             print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "ok"),
+    [
+        ({"Tag-Manifests-Required": ["md5"]}, True),
+        ({"Tag-Manifests-Required": ["sha1"]}, False),
+        ({"Tag-Manifests-Allowed": ["md5"]}, True),
+        ({"Tag-Manifests-Allowed": ["sha1"]}, False),
+    ],
+)
+def test_bag_validator_tag_manifest_files(src, dst, profile, ok):
+    """Test validation for tag-manifest files."""
+    bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")
