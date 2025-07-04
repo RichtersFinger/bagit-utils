@@ -1,3 +1,7 @@
+"""Common test fixtures."""
+
+from uuid import uuid4
+
 from pathlib import Path
 from shutil import rmtree
 
@@ -25,3 +29,17 @@ def tmp_setup(tmp):
 def tmp_cleanup(request, tmp):
     """Clean up tmp"""
     request.addfinalizer(lambda: _tmp_cleanup(tmp))
+
+
+@pytest.fixture(name="src")
+def _src(tmp):
+    src = tmp / str(uuid4())
+    src.mkdir()
+    (src / "data").mkdir()
+    (src / "data" / "payload.txt").write_bytes(b"data")
+    return src
+
+
+@pytest.fixture(name="dst")
+def _dst(tmp):
+    return tmp / str(uuid4())

@@ -1,24 +1,8 @@
 """Test module for `bagit.py`."""
 
-from uuid import uuid4
-
 import pytest
 
 from bagit_utils import Bag, BagItError
-
-
-@pytest.fixture(name="src")
-def _src(tmp):
-    src = tmp / str(uuid4())
-    src.mkdir()
-    (src / "data").mkdir()
-    (src / "data" / "payload.txt").write_bytes(b"data")
-    return src
-
-
-@pytest.fixture(name="dst")
-def _dst(tmp):
-    return tmp / str(uuid4())
 
 
 def create_test_bag(

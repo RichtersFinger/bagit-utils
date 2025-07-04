@@ -610,6 +610,7 @@ class ValidationReport:
 
     valid: Optional[bool] = None
     issues: list[Issue] = field(default_factory=list)
+    bag: Optional[Bag] = None
 
 
 class BagValidator:
@@ -624,6 +625,10 @@ class BagValidator:
     * no support for fetch.txt
     * no support for serialization
     * omitting Accept-BagIt-Version is equivalent to version 1.0
+    * Payload/Tag-file-matching for 'Payload-Files-X' and 'Tag-Files-X'
+      rely on `Path.match`
+    * disable warnings by setting `BagItProfileValidator.PRINT_WARNINGS`
+    * modular approach for custom validation steps
     * ...
     end TODO    ----------------------
 
@@ -692,7 +697,7 @@ class BagValidator:
                        (default None)
         """
         profile = cls._PROFILE_VALIDATOR.load_profile(profile, profile_src)
-        result = ValidationReport()
+        result = ValidationReport(bag=bag)
         for v in [
             cls.validate_baginfo,
             cls.validate_manifests_required,
@@ -740,16 +745,41 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Manifests-Required'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        for method in profile.get("Manifests-Required", []):
+            if not (bag.path / f"manifest-{method}.txt").is_file():
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Missing manifest for algorithm '{method}' in bag at "
+                        + f"'{bag.path}'.",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_manifests_allowed(
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Manifests-Allowed'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if profile.get("Manifests-Allowed") is None:
+            return result
+
+        for file in bag.path.glob("manifest-*.txt"):
+            if file.name not in map(
+                lambda m: f"manifest-{m}.txt", profile["Manifests-Allowed"]
+            ):
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Manifest file '{file.relative_to(bag.path)}' not "
+                        + f"allowed in bag at '{bag.path}'.",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_allow_fetchtxt(

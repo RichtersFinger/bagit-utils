@@ -1,0 +1,205 @@
+"""Test module for `validator.py`."""
+
+import pytest
+
+from bagit_utils import BagItProfileValidator, Bag, BagValidator
+
+
+def create_test_bag(src, dst, baginfo=None, algorithms=None) -> Bag:
+    """Creates and returns minimal `Bag`."""
+    return Bag.build_from(
+        src,
+        dst,
+        baginfo or {},
+        algorithms,
+        validate=False,
+    )
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _disable_warnings():
+    BagItProfileValidator.PRINT_WARNINGS = False
+
+
+@pytest.mark.parametrize(
+    ("profile", "ok"),
+    [
+        (
+            0,
+            False,
+        ),
+        (
+            {},
+            True,
+        ),
+        (
+            {"unknown": None},
+            False,
+        ),
+        (
+            {
+                "Bag-Info": {
+                    "a": {
+                        "required": True,
+                        "repeatable": True,
+                        "description": "a",
+                        "values": ["a"],
+                    }
+                }
+            },
+            True,
+        ),
+        (
+            {
+                "Bag-Info": {
+                    "a": {
+                        "required": True,
+                        "repeatable": True,
+                        "description": "a",
+                        "regex": "a",
+                    }
+                }
+            },
+            True,
+        ),
+        ({"Bag-Info": {"a": {"values": ["a"], "regex": "a"}}}, False),
+        ({"Bag-Info": {"a": {"required": None}}}, False),
+        ({"Bag-Info": {"a": {"repeatable": None}}}, False),
+        ({"Bag-Info": {"a": {"description": None}}}, False),
+        ({"Bag-Info": {"a": {"values": None}}}, False),
+        ({"Bag-Info": {"a": {"values": [None]}}}, False),
+        ({"Bag-Info": {"a": {"regex": None}}}, False),
+        ({"Bag-Info": {"a": {"regex": r"("}}}, False),
+        ({"Bag-Info": {"a": {"unknown": None}}}, False),
+        ({"Manifests-Required": ["md5"], "Manifests-Allowed": ["md5"]}, True),
+        ({"Manifests-Required": None}, False),
+        ({"Manifests-Allowed": None}, False),
+        ({"Manifests-Required": []}, True),
+        ({"Manifests-Allowed": []}, True),
+        ({"Manifests-Required": ["unknown"]}, True),
+        ({"Manifests-Required": ["md5"], "Manifests-Allowed": []}, False),
+        ({"Manifests-Required": [], "Manifests-Allowed": ["md5"]}, True),
+        ({"Allow-Fetch.txt": True}, True),
+        ({"Fetch.txt-Required": True}, True),
+        ({"Allow-Fetch.txt": None}, False),
+        ({"Fetch.txt-Required": None}, False),
+        ({"Allow-Fetch.txt": False, "Fetch.txt-Required": True}, False),
+        ({"Data-Empty": False}, True),
+        ({"Data-Empty": None}, False),
+        ({"Serialization": "forbidden"}, True),
+        ({"Serialization": None}, False),
+        ({"Serialization": "a"}, False),
+        ({"Accept-Serialization": ["application/zip"]}, True),
+        ({"Accept-Serialization": [None]}, False),
+        ({"Accept-Serialization": None}, False),
+        ({"Accept-BagIt-Version": None}, False),
+        ({"Accept-BagIt-Version": []}, False),
+        ({"Accept-BagIt-Version": ["0.93", "1.0"]}, True),
+        (
+            {
+                "Tag-Manifests-Required": ["md5"],
+                "Tag-Manifests-Allowed": ["md5"],
+            },
+            True,
+        ),
+        ({"Tag-Manifests-Required": None}, False),
+        ({"Tag-Manifests-Allowed": None}, False),
+        ({"Tag-Manifests-Required": []}, True),
+        ({"Tag-Manifests-Allowed": []}, True),
+        ({"Tag-Manifests-Required": ["unknown"]}, True),
+        (
+            {"Tag-Manifests-Required": ["md5"], "Tag-Manifests-Allowed": []},
+            False,
+        ),
+        (
+            {"Tag-Manifests-Required": [], "Tag-Manifests-Allowed": ["md5"]},
+            True,
+        ),
+        ({"Tag-Files-Required": None}, False),
+        ({"Tag-Files-Allowed": None}, False),
+        ({"Tag-Files-Required": []}, True),
+        ({"Tag-Files-Allowed": []}, True),
+        ({"Tag-Files-Required": ["any/file"]}, True),
+        ({"Tag-Files-Required": ["any/file"], "Tag-Files-Allowed": []}, False),
+        (
+            {"Tag-Files-Required": ["any/file"], "Tag-Files-Allowed": ["*"]},
+            True,
+        ),
+        (
+            {
+                "Tag-Files-Required": ["any/file"],
+                "Tag-Files-Allowed": ["**/*"],
+            },
+            True,
+        ),
+        (
+            {
+                "Tag-Files-Required": ["any/file"],
+                "Tag-Files-Allowed": ["meta/*"],
+            },
+            False,
+        ),
+        ({"Payload-Files-Required": None}, False),
+        ({"Payload-Files-Allowed": None}, False),
+        ({"Payload-Files-Required": []}, True),
+        ({"Payload-Files-Allowed": []}, True),
+        ({"Payload-Files-Required": ["any/file"]}, True),
+        (
+            {
+                "Payload-Files-Required": ["any/file"],
+                "Payload-Files-Allowed": [],
+            },
+            False,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["any/file"],
+                "Payload-Files-Allowed": ["*"],
+            },
+            True,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["any/file"],
+                "Payload-Files-Allowed": ["**/*"],
+            },
+            True,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["any/file"],
+                "Payload-Files-Allowed": ["meta/*"],
+            },
+            False,
+        ),
+    ],
+)
+def test_profile_validator(profile, ok):
+    """Test profile-validation via `BagItProfileValidator`."""
+    if ok:
+        BagItProfileValidator.load_profile(profile)
+        return
+    with pytest.raises(ValueError) as exc_info:
+        BagItProfileValidator.load_profile(profile)
+    print(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("profile", "ok"),
+    [
+        ({"Manifests-Required": ["md5"]}, True),
+        ({"Manifests-Required": ["sha1"]}, False),
+        ({"Manifests-Allowed": ["md5"]}, True),
+        ({"Manifests-Allowed": ["sha1"]}, False),
+    ],
+)
+def test_bag_validator_manifest_files(src, dst, profile, ok):
+    """Test validation for manifest files."""
+    bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")
