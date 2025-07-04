@@ -862,19 +862,43 @@ class BagValidator:
 
     @classmethod
     def validate_serialization(
-        cls, bag: Bag, profile: Mapping
+        # pylint: disable=unused-argument
+        cls,
+        bag: Bag,
+        profile: Mapping,
     ) -> ValidationReport:
         """Validate 'Serialization'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if "Serialization" in profile:
+            result.issues.append(
+                Issue(
+                    "warning",
+                    "Validation of bag-'Serialization' is currently not"
+                    + " supported.",
+                    "Serialization",
+                )
+            )
+        return result
 
     @classmethod
     def validate_accept_serialization(
-        cls, bag: Bag, profile: Mapping
+        # pylint: disable=unused-argument
+        cls,
+        bag: Bag,
+        profile: Mapping,
     ) -> ValidationReport:
         """Validate 'Accept-Serialization'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if "Accept-Serialization" in profile:
+            result.issues.append(
+                Issue(
+                    "warning",
+                    "Validation of bag-'Accept-Serialization' is currently not"
+                    + " supported.",
+                    "Accept-Serialization",
+                )
+            )
+        return result
 
     @classmethod
     def validate_accept_bagit_version(
