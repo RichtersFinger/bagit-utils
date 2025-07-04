@@ -288,24 +288,21 @@ def test_bag_validator_data_empty(src, dst, profile, callback, ok):
 
 
 @pytest.mark.parametrize(
-    ("profile", "callback", "ok"),
+    ("profile", "ok"),
     [
         (
             {"Accept-BagIt-Version": ["1.0"]},
-            lambda bag: None,
             True,
         ),
         (
             {"Accept-BagIt-Version": ["0.97"]},
-            lambda bag: None,
             False,
         ),
     ],
 )
-def test_bag_validator_accept_bagit_version(src, dst, profile, callback, ok):
+def test_bag_validator_accept_bagit_version(src, dst, profile, ok):
     """Test validation for accepted BagIt-version."""
     bag: Bag = create_test_bag(src, dst)
-    callback(bag)
 
     assert (
         report := BagValidator.validate_once(bag, profile=profile)
@@ -327,6 +324,39 @@ def test_bag_validator_accept_bagit_version(src, dst, profile, callback, ok):
 def test_bag_validator_tag_manifest_files(src, dst, profile, ok):
     """Test validation for tag-manifest files."""
     bag: Bag = create_test_bag(src, dst, algorithms=["md5"])
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "callback", "ok"),
+    [
+        (
+            {"Tag-Files-Required": []},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Tag-Files-Required": ["metadata.xml"]},
+            lambda bag: None,
+            False,
+        ),
+        (
+            {"Tag-Files-Required": ["metadata.xml"]},
+            lambda bag: (bag.path / "metadata.xml").touch(),
+            True,
+        ),
+    ],
+)
+def test_bag_validator_tag_files_required(src, dst, profile, callback, ok):
+    """Test validation for required tag-files."""
+    bag: Bag = create_test_bag(src, dst)
+    callback(bag)
 
     assert (
         report := BagValidator.validate_once(bag, profile=profile)

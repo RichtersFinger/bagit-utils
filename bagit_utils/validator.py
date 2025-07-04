@@ -957,8 +957,22 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Tag-Files-Required'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if profile.get("Tag-Files-Required") is None:
+            return result
+
+        for file in map(lambda f: bag.path / f, profile["Tag-Files-Required"]):
+            if not file.is_file():
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Missing required tag-file '{Path(file)}' in bag at "
+                        + f"'{bag.path}'.",
+                        "Tag-Files-Required",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_tag_files_allowed(
