@@ -446,3 +446,49 @@ def test_bag_validator_payload_files_required(src, dst, profile, callback, ok):
     if not ok:
         for issue in report.issues:
             print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "callback", "ok"),
+    [
+        (
+            {"Payload-Files-Allowed": []},
+            lambda bag: None,
+            False,
+        ),
+        (
+            {"Payload-Files-Allowed": ["data/*"]},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Payload-Files-Allowed": ["**/*"]},
+            lambda bag: [
+                (bag.path / "data" / "payload1.txt").touch(),
+                (bag.path / "data" / "data1").mkdir(),
+                (bag.path / "data" / "data1" / "payload2.txt").touch(),
+            ],
+            True,
+        ),
+        (
+            {"Payload-Files-Allowed": ["data/*"]},
+            lambda bag: [
+                (bag.path / "data" / "payload1.txt").touch(),
+                (bag.path / "data" / "data1").mkdir(),
+                (bag.path / "data" / "data1" / "payload2.txt").touch(),
+            ],
+            False,
+        ),
+    ],
+)
+def test_bag_validator_payload_files_allowed(src, dst, profile, callback, ok):
+    """Test validation for allowed payload-files."""
+    bag: Bag = create_test_bag(src, dst)
+    callback(bag)
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")

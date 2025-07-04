@@ -1045,8 +1045,25 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Payload-Files-Allowed'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if profile.get("Payload-Files-Allowed") is None:
+            return result
+
+        for file in [f for f in bag.path.glob("data/**/*") if f.is_file()]:
+            if not any(
+                file.relative_to(bag.path).match(p)
+                for p in profile["Payload-Files-Allowed"]
+            ):
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Payload file '{Path(file).relative_to(bag.path)}' in"
+                        + f" bag at '{bag.path}' is not allowed.",
+                        "Payload-Files-Allowed",
+                    )
+                )
+        return result
 
     @classmethod
     def custom_validation_hook(
