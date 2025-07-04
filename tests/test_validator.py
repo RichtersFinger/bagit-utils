@@ -370,6 +370,55 @@ def test_bag_validator_tag_files_required(src, dst, profile, callback, ok):
     ("profile", "callback", "ok"),
     [
         (
+            {"Tag-Files-Allowed": []},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Tag-Files-Allowed": []},
+            lambda bag: [
+                (bag.path / "metadata.xml").touch(),
+                (bag.path / "meta").mkdir(),
+                (bag.path / "meta" / "metadata.xml").touch(),
+            ],
+            False,
+        ),
+        (
+            {"Tag-Files-Allowed": ["**/metadata.xml"]},
+            lambda bag: [
+                (bag.path / "metadata.xml").touch(),
+                (bag.path / "meta").mkdir(),
+                (bag.path / "meta" / "metadata.xml").touch(),
+            ],
+            False,
+        ),
+        (
+            {"Tag-Files-Allowed": ["**/metadata.xml"]},
+            lambda bag: [
+                (bag.path / "meta").mkdir(),
+                (bag.path / "meta" / "metadata.xml").touch(),
+            ],
+            True,
+        ),
+    ],
+)
+def test_bag_validator_tag_files_allowed(src, dst, profile, callback, ok):
+    """Test validation for allowed tag-files."""
+    bag: Bag = create_test_bag(src, dst)
+    callback(bag)
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "callback", "ok"),
+    [
+        (
             {"Payload-Files-Required": []},
             lambda bag: None,
             True,

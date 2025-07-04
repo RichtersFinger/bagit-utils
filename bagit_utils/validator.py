@@ -333,7 +333,7 @@ class BagItProfileValidator:
         if bad_algorithms:
             raise ValueError(
                 cls._ERROR_PREFIX
-                + "Inconsistent manifest configuration. All required "
+                + "Conflicting manifest configuration. All required "
                 + "algorithms ('Manifests-Required') must also be allowed "
                 + "('Manifests-Allowed'). Required but not allowed "
                 + f"algorithm(s): {quote_list(bad_algorithms)}."
@@ -442,7 +442,7 @@ class BagItProfileValidator:
         if bad_algorithms:
             raise ValueError(
                 cls._ERROR_PREFIX
-                + "Inconsistent manifest configuration. All required "
+                + "Conflicting manifest configuration. All required "
                 + "algorithms ('Tag-Manifests-Required') must also be allowed "
                 + "('Tag-Manifests-Allowed'). Required but not allowed "
                 + f"algorithm(s): {quote_list(bad_algorithms)}."
@@ -481,7 +481,7 @@ class BagItProfileValidator:
         if bad_files:
             raise ValueError(
                 cls._ERROR_PREFIX
-                + "Inconsistent tag-files configuration. All required "
+                + "Conflicting tag-files configuration. All required "
                 + "files ('Tag-Files-Required') must also be allowed "
                 + "('Tag-Files-Allowed'). Required but not allowed "
                 + f"file(s): {quote_list(bad_files)}."
@@ -522,7 +522,7 @@ class BagItProfileValidator:
         if bad_files:
             raise ValueError(
                 cls._ERROR_PREFIX
-                + "Inconsistent payload-files configuration. All required "
+                + "Conflicting payload-files configuration. All required "
                 + "files ('Payload-Files-Required') must also be allowed "
                 + "('Payload-Files-Allowed'). Required but not allowed "
                 + f"file(s): {quote_list(bad_files)}."
@@ -980,8 +980,40 @@ class BagValidator:
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
         """Validate 'Tag-Files-Allowed'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        if profile.get("Tag-Files-Allowed") is None:
+            return result
+
+        excluded_files = (
+            list(bag.path.glob("data/**/*"))
+            + list(bag.path.glob("manifest-*.txt"))
+            + list(bag.path.glob("tagmanifest-*.txt"))
+            + [
+                bag.path / "bagit.txt",
+                bag.path / "bag-info.txt",
+                bag.path / "fetch.txt",
+            ]
+        )
+
+        for file in [
+            f
+            for f in bag.path.glob("**/*")
+            if f.is_file() and f not in excluded_files
+        ]:
+            if not any(
+                file.relative_to(bag.path).match(p)
+                for p in profile["Tag-Files-Allowed"]
+            ):
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Tag file '{Path(file).relative_to(bag.path)}' in bag"
+                        + f" at '{bag.path}' is not allowed.",
+                        "Tag-Files-Allowed",
+                    )
+                )
+        return result
 
     @classmethod
     def validate_payload_files_required(
@@ -992,7 +1024,9 @@ class BagValidator:
         if profile.get("Payload-Files-Required") is None:
             return result
 
-        for file in map(lambda f: bag.path / f, profile["Payload-Files-Required"]):
+        for file in map(
+            lambda f: bag.path / f, profile["Payload-Files-Required"]
+        ):
             if not file.is_file():
                 result.valid = False
                 result.issues.append(
