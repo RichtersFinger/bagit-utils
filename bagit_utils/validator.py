@@ -3,18 +3,26 @@
 from typing import Mapping, Optional
 from dataclasses import dataclass, field
 from urllib.request import urlopen
-from json import load
+from pathlib import Path
+from json import load, loads
 
 from .bagit import Bag
 
 
-def load_json(url: str, *args, **kwargs) -> dict:
+def load_json_url(url: str, *args, **kwargs) -> dict:
     """
     Returns JSON from source `url`. `args` and `kwargs` are passed into
     `urllib.request.urlopen`.
     """
     with urlopen(url, *args, **kwargs) as content:
         return load(content)
+
+
+def load_json_path(path: Path) -> dict:
+    """
+    Returns JSON from source `path`.
+    """
+    return loads(path.read_text(encoding="utf-8"))
 
 
 class BagItProfileValidator:
@@ -50,7 +58,7 @@ class BagItProfileValidator:
     def load_profile(
         cls,
         profile: Optional[Mapping] = None,
-        profile_url: Optional[str] = None,
+        profile_src: Optional[str | Path] = None,
     ):
         """
         Loads, validates, and returns BagIt-profile. If the profile is
@@ -59,21 +67,24 @@ class BagItProfileValidator:
         Keyword arguments:
         profile -- JSON profile
                    (default None)
-        profile_url -- JSON profile url
+        profile_src -- JSON profile url or path
                        (default None)
         """
-        if profile is None and profile_url is None:
+        if profile is None and profile_src is None:
             raise ValueError(
-                "Missing BagIt-profile. Either 'profile' or 'profile_url' "
+                "Missing BagIt-profile. Either 'profile' or 'profile_src' "
                 + "is required."
             )
-        if profile is not None and profile_url is not None:
+        if profile is not None and profile_src is not None:
             raise ValueError(
-                "Ambiguous BagIt-profile. Got both 'profile' and 'profile_url'"
+                "Ambiguous BagIt-profile. Got both 'profile' and 'profile_src'"
                 + " in request."
             )
         if profile is None:
-            profile = load_json(profile_url)
+            if Path(profile_src).is_file():
+                profile = load_json_path(Path(profile_src))
+            else:
+                profile = load_json_url(profile_src)
 
         # profile validation
         # * root
@@ -241,19 +252,19 @@ class BagValidator:
     end TODO    ----------------------
 
     This validator supports two modes of operation:
-    1. instantiate with a profile/profile_url `BagValidator(..)` and run
+    1. instantiate with a profile/profile_src `BagValidator(..)` and run
        repeated validations using that profile via `validate(..)`, or
     2. run one-shot validations via `BagValidator.validate_once(..)`.
 
     Keyword arguments:
     profile -- JSON profile
                 (default None)
-    profile_url -- JSON profile url
+    profile_src -- JSON profile url or path
                     (default None)
     profile_validator -- BagIt-profile validator class override
                          (default None)
 
-    At least one of the arguments `profile` or `profile_url` need to
+    At least one of the arguments `profile` or `profile_src` need to
     be given.
 
     [1] https://bagit-profiles.github.io/bagit-profiles-specification
@@ -265,12 +276,12 @@ class BagValidator:
     def __init__(
         self,
         profile: Optional[Mapping] = None,
-        profile_url: Optional[str] = None,
+        profile_src: Optional[str | Path] = None,
         profile_validator: Optional[type[BagItProfileValidator]] = None,
     ) -> None:
         self.profile = (
             profile_validator or self._PROFILE_VALIDATOR
-        ).load_profile(profile, profile_url)
+        ).load_profile(profile, profile_src)
 
     def validate(
         self,
@@ -289,22 +300,22 @@ class BagValidator:
         cls,
         bag: Bag,
         profile: Optional[Mapping] = None,
-        profile_url: Optional[str] = None,
+        profile_src: Optional[str | Path] = None,
     ) -> ValidationReport:
         """
         Run one-shot validation on a `bag` with the given profile.
 
-        At least one of the arguments `profile` or `profile_url` need to
+        At least one of the arguments `profile` or `profile_src` need to
         be given.
 
         Keyword arguments:
         bag -- Bag-instance to be validated
         profile -- JSON profile
                    (default None)
-        profile_url -- JSON profile url
+        profile_src -- JSON profile url or path
                        (default None)
         """
-        profile = cls._PROFILE_VALIDATOR.load_profile(profile, profile_url)
+        profile = cls._PROFILE_VALIDATOR.load_profile(profile, profile_src)
         result = ValidationReport()
         for v in [
             cls.validate_baginfo,
