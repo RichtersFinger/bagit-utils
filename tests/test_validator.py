@@ -16,11 +16,6 @@ def create_test_bag(src, dst, baginfo=None, algorithms=None) -> Bag:
     )
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _disable_warnings():
-    BagItProfileValidator.PRINT_WARNINGS = False
-
-
 @pytest.mark.parametrize(
     ("profile", "ok"),
     [

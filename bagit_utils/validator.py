@@ -42,7 +42,6 @@ class BagItProfileValidator:
     [2] https://github.com/RichtersFinger/bagit-utils
     """
 
-    PRINT_WARNINGS = True
     _ACCEPTED_PROPERTIES = [
         "BagIt-Profile-Info",
         "Bag-Info",
@@ -68,7 +67,6 @@ class BagItProfileValidator:
         "description",
         "regex",
     ]
-    _ACCEPTED_MANIFEST_ALGORITHMS = ["md5", "sha1", "sha256", "sha512"]
     _ACCEPTED_SERIALIZATION_VALUES = ["forbidden", "required", "optional"]
     _ERROR_PREFIX = "BagIt-profile incompatible: "
     _ERROR_BAD_TYPE = (
@@ -309,19 +307,6 @@ class BagItProfileValidator:
         """Handles validation for a list of manifest algorithms."""
         cls._handle_type_validation(list, key, data)
         cls._handle_list_of_str_validation(key, data)
-        if not cls.PRINT_WARNINGS:
-            return
-        unknown_methods = [
-            m for m in data if m not in cls._ACCEPTED_MANIFEST_ALGORITHMS
-        ]
-        if unknown_methods:
-            print(
-                "WARNING The following manifest-algorithms are currently not "
-                + "supported by 'bagit-utils': "
-                + f"{quote_list(unknown_methods)} (known values are"
-                + f" {quote_list(cls._ACCEPTED_MANIFEST_ALGORITHMS)}).",
-                file=sys.stderr,
-            )
 
     @classmethod
     def validate_manifests_required(cls, profile: Mapping) -> None:
@@ -390,12 +375,6 @@ class BagItProfileValidator:
     @classmethod
     def validate_serialization(cls, profile: Mapping) -> None:
         """Validate 'Serialization'-section of `profile`."""
-        if cls.PRINT_WARNINGS and profile.get("Serialization", True):
-            print(
-                "WARNING Bag-serialization is currently not supported by "
-                + "'bagit-utils'.",
-                file=sys.stderr,
-            )
         if "Serialization" not in profile:
             return
         cls._handle_type_validation(
@@ -412,12 +391,6 @@ class BagItProfileValidator:
     @classmethod
     def validate_accept_serialization(cls, profile: Mapping) -> None:
         """Validate 'Accept-Serialization'-section of `profile`."""
-        if cls.PRINT_WARNINGS and profile.get("Accept-Serialization", True):
-            print(
-                "WARNING Bag-serialization is currently not supported by "
-                + "'bagit-utils'.",
-                file=sys.stderr,
-            )
         if "Accept-Serialization" not in profile:
             return
         cls._handle_type_validation(
@@ -603,7 +576,6 @@ class BagValidator:
     * omitting Accept-BagIt-Version is equivalent to version 1.0
     * Payload/Tag-file-matching for 'Payload-Files-X' and 'Tag-Files-X'
       rely on `Path.match`
-    * disable warnings by setting `BagItProfileValidator.PRINT_WARNINGS`
     * modular approach for custom validation steps
     * ...
     end TODO    ----------------------
