@@ -601,6 +601,8 @@ class BagValidator:
     """
 
     _PROFILE_VALIDATOR = BagItProfileValidator
+    ISSUE_INFO_MESSAGES = True
+    ISSUE_WARNINGS = True
 
     def __init__(
         self,
@@ -737,7 +739,11 @@ class BagValidator:
     ) -> ValidationReport:
         """Validate 'Allow-Fetch.txt'-section of `profile` in `bag`."""
         result = ValidationReport(True)
-        if "Allow-Fetch.txt" in profile:
+        if (
+            "Allow-Fetch.txt" in profile
+            and profile["Allow-Fetch.txt"]
+            and cls.ISSUE_INFO_MESSAGES
+        ):
             result.issues.append(
                 Issue(
                     "info",
@@ -765,7 +771,11 @@ class BagValidator:
     ) -> ValidationReport:
         """Validate 'Fetch.txt-Required'-section of `profile` in `bag`."""
         result = ValidationReport(True)
-        if "Fetch.txt-Required" in profile:
+        if (
+            "Fetch.txt-Required" in profile
+            and profile["Fetch.txt-Required"]
+            and cls.ISSUE_INFO_MESSAGES
+        ):
             result.issues.append(
                 Issue(
                     "info",
@@ -827,7 +837,7 @@ class BagValidator:
     ) -> ValidationReport:
         """Validate 'Serialization'-section of `profile` in `bag`."""
         result = ValidationReport(True)
-        if "Serialization" in profile:
+        if "Serialization" in profile and cls.ISSUE_WARNINGS:
             result.issues.append(
                 Issue(
                     "warning",
@@ -847,7 +857,7 @@ class BagValidator:
     ) -> ValidationReport:
         """Validate 'Accept-Serialization'-section of `profile` in `bag`."""
         result = ValidationReport(True)
-        if "Accept-Serialization" in profile:
+        if "Accept-Serialization" in profile and cls.ISSUE_WARNINGS:
             result.issues.append(
                 Issue(
                     "warning",
@@ -865,7 +875,10 @@ class BagValidator:
         """Validate 'Accept-BagIt-Version'-section of `profile` in `bag`."""
         result = ValidationReport(True)
         if "Accept-BagIt-Version" in profile:
-            if profile["Accept-BagIt-Version"] != ["1.0"]:
+            if (
+                profile["Accept-BagIt-Version"] != ["1.0"]
+                and cls.ISSUE_INFO_MESSAGES
+            ):
                 result.issues.append(
                     Issue(
                         "info",
