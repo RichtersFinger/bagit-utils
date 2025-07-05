@@ -1,7 +1,6 @@
 """BagIt-profile validator definition."""
 
 from typing import Mapping, Optional
-import sys
 from dataclasses import dataclass, field
 from urllib.request import urlopen
 from pathlib import Path
