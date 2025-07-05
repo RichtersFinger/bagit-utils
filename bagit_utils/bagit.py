@@ -697,7 +697,7 @@ class Bag:
             report = bag.validate()
             if not report.valid:
                 raise BagItError(
-                    "Bag validation failed:\n"
+                    "Bag is invalid:\n"
                     + "\n".join(
                         map(
                             lambda i: f"* {i.level}: {i.message}",

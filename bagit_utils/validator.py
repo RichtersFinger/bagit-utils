@@ -657,7 +657,7 @@ class BagValidator:
                 Issue(
                     "error",
                     f"Missing required 'bag-info.txt'-metadata tag '{tag}' in "
-                    + f"bag at '{bag.path}'.",
+                    + f"Bag at '{bag.path}'.",
                     f"Bag-Info.{tag}",
                 )
             )
@@ -681,7 +681,7 @@ class BagValidator:
                 Issue(
                     "error",
                     f"Too many 'bag-info.txt'-metadata tags '{tag}' in "
-                    + f"bag at '{bag.path}' (tag must not be repeated).",
+                    + f"Bag at '{bag.path}' (tag must not be repeated).",
                     f"Bag-Info.{tag}",
                 )
             )
@@ -706,7 +706,7 @@ class BagValidator:
                     Issue(
                         "error",
                         f"Bad value '{value}' for 'bag-info.txt'-metadata "
-                        + f"tag '{tag}' in bag at '{bag.path}' (accepted "
+                        + f"tag '{tag}' in Bag at '{bag.path}' (accepted "
                         + f"values are: {quote_list(values) or '-'}).",
                         f"Bag-Info.{tag}",
                     )
@@ -732,7 +732,7 @@ class BagValidator:
                     Issue(
                         "error",
                         f"Value '{value}' of 'bag-info.txt'-metadata tag "
-                        + f"'{tag}' in bag at '{bag.path}' does not satisfy "
+                        + f"'{tag}' in Bag at '{bag.path}' does not satisfy "
                         + f"regex '{tag_profile['regex']}'.",
                         f"Bag-Info.{tag}",
                     )
@@ -761,7 +761,7 @@ class BagValidator:
             result.issues.append(
                 Issue(
                     "warning",
-                    f"The 'bag-info.txt'-metadata in bag at '{bag.path}' "
+                    f"The 'bag-info.txt'-metadata in Bag at '{bag.path}' "
                     + "contains tags that are not described by the given "
                     + f"profile: {quote_list(unknown_tags)}.",
                     "Bag-Info",
@@ -781,7 +781,7 @@ class BagValidator:
                 result.issues.append(
                     Issue(
                         "error",
-                        f"Missing manifest for algorithm '{method}' in bag at "
+                        f"Missing manifest for algorithm '{method}' in Bag at "
                         + f"'{bag.path}'.",
                         "Manifests-Required",
                     )
@@ -806,7 +806,7 @@ class BagValidator:
                     Issue(
                         "error",
                         f"Manifest file '{file.relative_to(bag.path)}' not "
-                        + f"allowed in bag at '{bag.path}'.",
+                        + f"allowed in Bag at '{bag.path}'.",
                         "Manifests-Allowed",
                     )
                 )
@@ -838,7 +838,7 @@ class BagValidator:
             result.issues.append(
                 Issue(
                     "error",
-                    f"File 'fetch.txt' in bag at '{bag.path}' is not allowed.",
+                    f"File 'fetch.txt' in Bag at '{bag.path}' is not allowed.",
                     "Allow-Fetch.txt",
                 )
             )
@@ -870,7 +870,7 @@ class BagValidator:
             result.issues.append(
                 Issue(
                     "error",
-                    f"Missing file 'fetch.txt' in bag at '{bag.path}'.",
+                    f"Missing file 'fetch.txt' in Bag at '{bag.path}'.",
                     "Fetch.txt-Required",
                 )
             )
@@ -889,7 +889,7 @@ class BagValidator:
                 result.issues.append(
                     Issue(
                         "error",
-                        f"Payload of bag at '{bag.path}' must not contain more"
+                        f"Payload of Bag at '{bag.path}' must not contain more"
                         + f" than one file (found {len(files)} files).",
                         "Data-Empty",
                     )
@@ -900,7 +900,7 @@ class BagValidator:
                     Issue(
                         "error",
                         f"Payload file '{files[0].relative_to(bag.path)}' in "
-                        + f"bag at '{bag.path}' must be zero bytes "
+                        + f"Bag at '{bag.path}' must be zero bytes "
                         + f"(found {files[0].lstat().st_size}B).",
                         "Data-Empty",
                     )
@@ -920,7 +920,7 @@ class BagValidator:
             result.issues.append(
                 Issue(
                     "warning",
-                    "Validation of bag-'Serialization' is currently not"
+                    "Validation of Bag-'Serialization' is currently not"
                     + " supported.",
                     "Serialization",
                 )
@@ -940,7 +940,7 @@ class BagValidator:
             result.issues.append(
                 Issue(
                     "warning",
-                    "Validation of bag-'Accept-Serialization' is currently not"
+                    "Validation of Bag-'Accept-Serialization' is currently not"
                     + " supported.",
                     "Accept-Serialization",
                 )
@@ -960,7 +960,7 @@ class BagValidator:
             ):
                 result.issues.append(
                     Issue(
-                        "info",
+                        "warning",
                         "This library currently only supports BagIt at version"
                         + " '1.0'.",
                         "Accept-BagIt-Version",
@@ -979,7 +979,7 @@ class BagValidator:
                 result.issues.append(
                     Issue(
                         "error",
-                        f"Bad BagIt-version for bag at '{bag.path}' (got "
+                        f"Bad BagIt-version for Bag at '{bag.path}' (got "
                         + f"'{bag_version}' but expected one of "
                         + f"{quote_list(profile['Accept-BagIt-Version'])}).",
                         "Accept-BagIt-Version",
@@ -999,7 +999,7 @@ class BagValidator:
                 result.issues.append(
                     Issue(
                         "error",
-                        f"Missing tagmanifest for algorithm '{method}' in bag"
+                        f"Missing tagmanifest for algorithm '{method}' in Bag"
                         + f" at '{bag.path}'.",
                         "Tag-Manifests-Required",
                     )
@@ -1025,7 +1025,7 @@ class BagValidator:
                     Issue(
                         "error",
                         f"Tag-manifest file '{file.relative_to(bag.path)}' not"
-                        + f" allowed in bag at '{bag.path}'.",
+                        + f" allowed in Bag at '{bag.path}'.",
                         "Tag-Manifests-Allowed",
                     )
                 )
@@ -1047,7 +1047,7 @@ class BagValidator:
                     Issue(
                         "error",
                         "Missing required tag-file "
-                        + f"'{Path(file).relative_to(bag.path)}' in bag at "
+                        + f"'{Path(file).relative_to(bag.path)}' in Bag at "
                         + f"'{bag.path}'.",
                         "Tag-Files-Required",
                     )
@@ -1087,7 +1087,7 @@ class BagValidator:
                 result.issues.append(
                     Issue(
                         "error",
-                        f"Tag file '{Path(file).relative_to(bag.path)}' in bag"
+                        f"Tag file '{Path(file).relative_to(bag.path)}' in Bag"
                         + f" at '{bag.path}' is not allowed.",
                         "Tag-Files-Allowed",
                     )
@@ -1112,7 +1112,7 @@ class BagValidator:
                     Issue(
                         "error",
                         "Missing required payload-file "
-                        + f"'{Path(file).relative_to(bag.path)}' in bag at "
+                        + f"'{Path(file).relative_to(bag.path)}' in Bag at "
                         + f"'{bag.path}'.",
                         "Payload-Files-Required",
                     )
@@ -1138,7 +1138,7 @@ class BagValidator:
                     Issue(
                         "error",
                         f"Payload file '{Path(file).relative_to(bag.path)}' in"
-                        + f" bag at '{bag.path}' is not allowed.",
+                        + f" Bag at '{bag.path}' is not allowed.",
                         "Payload-Files-Allowed",
                     )
                 )
