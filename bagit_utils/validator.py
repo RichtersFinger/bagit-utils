@@ -576,6 +576,7 @@ class BagValidator:
     * omitting Accept-BagIt-Version is equivalent to version 1.0
     * Payload/Tag-file-matching for 'Payload-Files-X' and 'Tag-Files-X'
       rely on `Path.match`
+    * Bag-Info: BagIt-Profile-Identifier is not required
     * modular approach for custom validation steps
     * ...
     end TODO    ----------------------
@@ -621,6 +622,8 @@ class BagValidator:
         """
         Run validation on a `bag` with this validator's profile.
 
+        The given `bag` is expected to be passing `bag.validate`.
+
         Keyword arguments:
         bag -- Bag-instance to be validated
         """
@@ -635,6 +638,8 @@ class BagValidator:
     ) -> ValidationReport:
         """
         Run one-shot validation on a `bag` with the given profile.
+
+        The given `bag` is expected to be passing `bag.validate`.
 
         At least one of the arguments `profile` or `profile_src` need to
         be given.
@@ -685,10 +690,131 @@ class BagValidator:
         total.issues += partial.issues
 
     @classmethod
+    def validate_baginfo_tag_required(
+        cls, tag: str, bag: Bag, tag_profile: Mapping
+    ) -> ValidationReport:
+        """
+        Validate 'required'-property of `bag.baginfo`-tag with name
+        `tag` using tag's subsection of profile `tag_profile`.
+        """
+        result = ValidationReport(True)
+        if tag_profile.get("required", False) and tag not in bag.baginfo:
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error",
+                    f"Missing required 'bag-info.txt'-metadata tag '{tag}' in "
+                    + f"bag at '{bag.path}'.",
+                    f"Bag-Info.{tag}",
+                )
+            )
+        return result
+
+    @classmethod
+    def validate_baginfo_tag_repeatable(
+        cls, tag: str, bag: Bag, tag_profile: Mapping
+    ) -> ValidationReport:
+        """
+        Validate 'repeatable'-property of `bag.baginfo`-tag with name
+        `tag` using tag's subsection of profile `tag_profile`.
+        """
+        result = ValidationReport(True)
+        if (
+            not tag_profile.get("repeatable", True)
+            and len(bag.baginfo.get(tag, [])) > 1
+        ):
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error",
+                    f"Too many 'bag-info.txt'-metadata tags '{tag}' in "
+                    + f"bag at '{bag.path}' (tag must not be repeated).",
+                    f"Bag-Info.{tag}",
+                )
+            )
+        return result
+
+    @classmethod
+    def validate_baginfo_tag_values(
+        cls, tag: str, bag: Bag, tag_profile: Mapping
+    ) -> ValidationReport:
+        """
+        Validate 'values'-property of `bag.baginfo`-tag with name
+        `tag` using tag's subsection of profile `tag_profile`.
+        """
+        result = ValidationReport(True)
+        values = tag_profile.get("values")
+        if values is None or tag not in bag.baginfo:
+            return result
+        for value in bag.baginfo[tag]:
+            if value not in values:
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Bad value '{value}' for 'bag-info.txt'-metadata "
+                        + f"tag '{tag}' in bag at '{bag.path}' (accepted "
+                        + f"values are: {quote_list(values) or '-'}).",
+                        f"Bag-Info.{tag}",
+                    )
+                )
+        return result
+
+    @classmethod
+    def validate_baginfo_tag_regex(
+        cls, tag: str, bag: Bag, tag_profile: Mapping
+    ) -> ValidationReport:
+        """
+        Validate 'regex'-property of `bag.baginfo`-tag with name
+        `tag` using tag's subsection of profile `tag_profile`.
+        """
+        result = ValidationReport(True)
+        if "regex" not in tag_profile:
+            return result
+        regex = re.compile(tag_profile["regex"])
+        for value in bag.baginfo.get(tag, []):
+            if not regex.fullmatch(value):
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Value '{value}' of 'bag-info.txt'-metadata tag "
+                        + f"'{tag}' in bag at '{bag.path}' does not satisfy "
+                        + f"regex '{tag_profile['regex']}'.",
+                        f"Bag-Info.{tag}",
+                    )
+                )
+        return result
+
+    @classmethod
     def validate_baginfo(cls, bag: Bag, profile: Mapping) -> ValidationReport:
         """Validate 'Bag-Info'-section of `profile` in `bag`."""
-        # TODO
-        return ValidationReport()
+        result = ValidationReport(True)
+        for tag, tag_profile in profile.get("Bag-Info", {}).items():
+            for v in [
+                cls.validate_baginfo_tag_required,
+                cls.validate_baginfo_tag_repeatable,
+                cls.validate_baginfo_tag_values,
+                cls.validate_baginfo_tag_regex,
+            ]:
+                cls._handle_validation_step(
+                    result,
+                    v(tag, bag, tag_profile),
+                )
+        unknown_tags = set(bag.baginfo.keys()) - set(
+            profile.get("Bag-Info", {}).keys()
+        )
+        if unknown_tags:
+            result.issues.append(
+                Issue(
+                    "warning",
+                    f"The 'bag-info.txt'-metadata in bag at '{bag.path}' "
+                    + "contains tags that are not described by the given "
+                    + f"profile: {quote_list(unknown_tags)}.",
+                    "Bag-Info",
+                )
+            )
+        return result
 
     @classmethod
     def validate_manifests_required(

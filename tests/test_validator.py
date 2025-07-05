@@ -492,3 +492,123 @@ def test_bag_validator_payload_files_allowed(src, dst, profile, callback, ok):
     if not ok:
         for issue in report.issues:
             print(f"{issue.level}: {issue.message}")
+
+
+@pytest.mark.parametrize(
+    ("profile", "callback", "ok"),
+    [
+        (
+            {},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"required": True}}},
+            lambda bag: None,
+            False,
+        ),
+        (
+            {"Bag-Info": {"a": {"required": False}}},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {}}},  # default
+            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value"]}),
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"required": True}}},
+            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value"]}),
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"repeatable": True}}},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"repeatable": False}}},
+            lambda bag: bag.generate_baginfo(
+                bag.baginfo | {"a": ["value0", "value1"]}
+            ),
+            False,
+        ),
+        (
+            {"Bag-Info": {"a": {}}},  # default
+            lambda bag: bag.generate_baginfo(
+                bag.baginfo | {"a": ["value0", "value1"]}
+            ),
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"repeatable": True}}},
+            lambda bag: bag.generate_baginfo(
+                bag.baginfo | {"a": ["value0", "value1"]}
+            ),
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"values": []}}},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"values": ["value0"]}}},
+            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value1"]}),
+            False,
+        ),
+        (
+            {"Bag-Info": {"a": {"values": ["value0"]}}},
+            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value0"]}),
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"regex": r"value[0-9]"}}},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"regex": r"value[0-9]"}}},
+            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value0"]}),
+            True,
+        ),
+        (
+            {"Bag-Info": {"a": {"regex": r"value[0-9]"}}},
+            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["valueA"]}),
+            False,
+        ),
+        (
+            {"Bag-Info": {"a": {"regex": r"value[0-9]"}}},
+            lambda bag: bag.generate_baginfo(
+                bag.baginfo | {"a": ["-value0-"]}
+            ),
+            False,
+        ),
+        (
+            {"Bag-Info": {"a": {"repeatable": False, "regex": r"value[0-9]"}}},
+            lambda bag: bag.generate_baginfo(
+                bag.baginfo | {"a": ["value0", "-value1-"]}
+            ),
+            False,
+        ),
+        (  # unknown-tag warning
+            {"Bag-Info": {"a": {"values": []}}},
+            lambda bag: bag.generate_baginfo(
+                bag.baginfo | {"a": ["value0"], "b": ["value1"]}
+            ),
+            False,
+        ),
+    ],
+)
+def test_bag_validator_bag_info(src, dst, profile, callback, ok):
+    """Test validation for Bag-Info-section."""
+    bag: Bag = create_test_bag(src, dst)
+    callback(bag)
+
+    assert (
+        report := BagValidator.validate_once(bag, profile=profile)
+    ).valid is ok
+    if not ok:
+        for issue in report.issues:
+            print(f"{issue.level}: {issue.message}")
