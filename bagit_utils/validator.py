@@ -1,12 +1,12 @@
 """BagIt-profile validator definition."""
 
 from typing import Mapping, Optional
-from dataclasses import dataclass, field
 from urllib.request import urlopen
 from pathlib import Path
 from json import load, loads
 import re
 
+from .common import quote_list, Issue, ValidationReport
 from .bagit import Bag
 
 
@@ -22,13 +22,6 @@ def load_json_url(url: str, *args, **kwargs) -> dict:
 def load_json_path(path: Path) -> dict:
     """Returns JSON from source `path`."""
     return loads(path.read_text(encoding="utf-8"))
-
-
-def quote_list(data: list[str], quote: Optional[str] = None) -> str:
-    """Returns `data` reformatted into enumeration of quoted values."""
-    return ", ".join(
-        map(lambda d: f"""{quote or "'"}{d}{quote or "'"}""", data)
-    )
 
 
 class BagItProfileValidator:
@@ -534,31 +527,6 @@ class BagItProfileValidator:
         profile: Mapping,
     ) -> None:
         """Hook for custom validation steps."""
-
-
-@dataclass
-class Issue:
-    """
-    Record class for validation issues.
-
-    Keyword arguments:
-    level -- issue severity (one of 'info', 'warning', and 'error')
-    message -- issue description
-    origin -- issue origin identifier
-    """
-
-    level: str
-    message: str
-    origin: Optional[str] = None
-
-
-@dataclass
-class ValidationReport:
-    """Record class for validation reports."""
-
-    valid: Optional[bool] = None
-    issues: list[Issue] = field(default_factory=list)
-    bag: Optional[Bag] = None
 
 
 class BagValidator:
