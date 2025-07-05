@@ -507,11 +507,17 @@ class Bag:
 
         return "\n".join(lines)
 
-    def generate_baginfo(
+    def set_baginfo(
         self,
         baginfo: Mapping[str, list[str]],
+        write_to_disk: bool = True,
     ) -> None:
         """Sets new bag-info contents and writes to disk."""
+        self._baginfo = baginfo
+
+        if not write_to_disk:
+            return
+
         (self.path / "bag-info.txt").write_text(
             "\n".join(
                 [
@@ -524,10 +530,11 @@ class Bag:
             ),
             encoding="utf-8",
         )
-        self._baginfo = baginfo
 
-    def generate_manifests(
-        self, algorithms: Optional[Iterable[str]] = None
+    def set_manifests(
+        self,
+        algorithms: Optional[Iterable[str]] = None,
+        write_to_disk: bool = True,
     ) -> dict[str, dict[str, str]]:
         """
         Calculate checksums, clear existing manifests, and write
@@ -556,8 +563,6 @@ class Bag:
 
         # clear existing data
         self._manifests = {}
-        for f in self.path.glob("manifest-*.txt"):
-            f.unlink()
 
         # generate anew
         for a in algorithms:
@@ -566,14 +571,23 @@ class Bag:
                 for f in self.path.glob("data/**/*")
                 if f.is_file()
             }
+
+        if not write_to_disk:
+            return
+
+        for f in self.path.glob("manifest-*.txt"):
+            if f.is_file():
+                f.unlink()
         for a, m in self._manifests.items():
             (self.path / f"manifest-{a}.txt").write_text(
                 "\n".join(f"{c} {f}" for f, c in m.items()) + "\n",
                 encoding="utf-8",
             )
 
-    def generate_tag_manifests(
-        self, algorithms: Optional[Iterable[str]] = None
+    def set_tag_manifests(
+        self,
+        algorithms: Optional[Iterable[str]] = None,
+        write_to_disk: bool = True,
     ) -> dict[str, dict[str, str]]:
         """
         Calculate checksums, clear existing tag-manifests, and write
@@ -602,8 +616,6 @@ class Bag:
 
         # clear existing data
         self._tag_manifests = {}
-        for f in self.path.glob("tagmanifest-*.txt"):
-            f.unlink()
 
         # generate anew
         for a in algorithms:
@@ -616,6 +628,13 @@ class Bag:
                 )
                 if f.is_file()
             }
+
+        if not write_to_disk:
+            return
+
+        for f in self.path.glob("tagmanifest-*.txt"):
+            if f.is_file():
+                f.unlink()
         for a, m in self._tag_manifests.items():
             (self.path / f"tagmanifest-{a}.txt").write_text(
                 "\n".join(f"{c} {f}" for f, c in m.items()) + "\n",
@@ -689,9 +708,9 @@ class Bag:
         # generate bag
         bag = cls(dst, False)
         bag.generate_bagit_declaration()
-        bag.generate_baginfo(baginfo)
-        bag.generate_manifests(algorithms)
-        bag.generate_tag_manifests(algorithms)
+        bag.set_baginfo(baginfo)
+        bag.set_manifests(algorithms)
+        bag.set_tag_manifests(algorithms)
 
         if validate:
             report = bag.validate()

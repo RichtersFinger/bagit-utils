@@ -514,12 +514,12 @@ def test_bag_validator_payload_files_allowed(src, dst, profile, callback, ok):
         ),
         (
             {"Bag-Info": {"a": {}}},  # default
-            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value"]}),
+            lambda bag: bag.set_baginfo(bag.baginfo | {"a": ["value"]}, False),
             True,
         ),
         (
             {"Bag-Info": {"a": {"required": True}}},
-            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value"]}),
+            lambda bag: bag.set_baginfo(bag.baginfo | {"a": ["value"]}, False),
             True,
         ),
         (
@@ -529,22 +529,22 @@ def test_bag_validator_payload_files_allowed(src, dst, profile, callback, ok):
         ),
         (
             {"Bag-Info": {"a": {"repeatable": False}}},
-            lambda bag: bag.generate_baginfo(
-                bag.baginfo | {"a": ["value0", "value1"]}
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["value0", "value1"]}, False
             ),
             False,
         ),
         (
             {"Bag-Info": {"a": {}}},  # default
-            lambda bag: bag.generate_baginfo(
-                bag.baginfo | {"a": ["value0", "value1"]}
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["value0", "value1"]}, False
             ),
             True,
         ),
         (
             {"Bag-Info": {"a": {"repeatable": True}}},
-            lambda bag: bag.generate_baginfo(
-                bag.baginfo | {"a": ["value0", "value1"]}
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["value0", "value1"]}, False
             ),
             True,
         ),
@@ -555,12 +555,16 @@ def test_bag_validator_payload_files_allowed(src, dst, profile, callback, ok):
         ),
         (
             {"Bag-Info": {"a": {"values": ["value0"]}}},
-            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value1"]}),
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["value1"]}, False
+            ),
             False,
         ),
         (
             {"Bag-Info": {"a": {"values": ["value0"]}}},
-            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value0"]}),
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["value0"]}, False
+            ),
             True,
         ),
         (
@@ -570,32 +574,36 @@ def test_bag_validator_payload_files_allowed(src, dst, profile, callback, ok):
         ),
         (
             {"Bag-Info": {"a": {"regex": r"value[0-9]"}}},
-            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["value0"]}),
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["value0"]}, False
+            ),
             True,
         ),
         (
             {"Bag-Info": {"a": {"regex": r"value[0-9]"}}},
-            lambda bag: bag.generate_baginfo(bag.baginfo | {"a": ["valueA"]}),
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["valueA"]}, False
+            ),
             False,
         ),
         (
             {"Bag-Info": {"a": {"regex": r"value[0-9]"}}},
-            lambda bag: bag.generate_baginfo(
-                bag.baginfo | {"a": ["-value0-"]}
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["-value0-"]}, False
             ),
             False,
         ),
         (
             {"Bag-Info": {"a": {"repeatable": False, "regex": r"value[0-9]"}}},
-            lambda bag: bag.generate_baginfo(
-                bag.baginfo | {"a": ["value0", "-value1-"]}
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["value0", "-value1-"]}, False
             ),
             False,
         ),
         (  # unknown-tag warning
             {"Bag-Info": {"a": {"values": []}}},
-            lambda bag: bag.generate_baginfo(
-                bag.baginfo | {"a": ["value0"], "b": ["value1"]}
+            lambda bag: bag.set_baginfo(
+                bag.baginfo | {"a": ["value0"], "b": ["value1"]}, False
             ),
             False,
         ),

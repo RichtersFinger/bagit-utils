@@ -108,7 +108,7 @@ def test_update_baginfo_manifests(src, dst):
     assert bag.validate_manifests().valid
 
     # change baginfo
-    bag.generate_baginfo({"BagInfoKey": ["BagInfoValue"]})
+    bag.set_baginfo({"BagInfoKey": ["BagInfoValue"]})
     assert b"BagInfoKey" in (bag.path / "bag-info.txt").read_bytes()
     report = bag.validate_manifests()
     assert not report.valid
@@ -116,8 +116,8 @@ def test_update_baginfo_manifests(src, dst):
         print(f"{issue.level}: {issue.message}")
 
     # update manifests
-    bag.generate_manifests()
-    bag.generate_tag_manifests()
+    bag.set_manifests()
+    bag.set_tag_manifests()
     assert bag.validate_manifests().valid
 
 
@@ -164,8 +164,8 @@ def test_build_from_algorithms(src, dst):
     assert (bag.path / "tagmanifest-sha1.txt").is_file()
 
 
-def test_generate_manifests(src, dst):
-    """Test `Bag.generate_manifests` with specific algorithms."""
+def test_set_manifests(src, dst):
+    """Test `Bag.set_manifests` with specific algorithms."""
     bag: Bag = create_test_bag(src, dst)
 
     assert len(bag.manifests) == 1
@@ -175,22 +175,31 @@ def test_generate_manifests(src, dst):
     assert (bag.path / "tagmanifest-sha512.txt").is_file()
     assert "sha512" in bag.tag_manifests
 
-    bag.generate_manifests(["md5", "sha1"])
-    bag.generate_tag_manifests(["md5", "sha1"])
+    bag.set_manifests(["md5", "sha1"], False)
+    bag.set_tag_manifests(["md5", "sha1"], False)
+    assert (bag.path / "manifest-sha512.txt").is_file()
+    assert (bag.path / "tagmanifest-sha512.txt").is_file()
+    assert not (bag.path / "manifest-md5.txt").is_file()
+    assert not (bag.path / "tagmanifest-md5.txt").is_file()
+    assert not (bag.path / "manifest-sha1.txt").is_file()
+    assert not (bag.path / "tagmanifest-sha1.txt").is_file()
     assert len(bag.manifests) == 2
+    assert len(bag.tag_manifests) == 2
     assert "md5" in bag.manifests and "sha1" in bag.manifests
+    assert "md5" in bag.tag_manifests and "sha1" in bag.tag_manifests
+
+    bag.set_manifests(["md5", "sha1"])
+    bag.set_tag_manifests(["md5", "sha1"])
     assert not (bag.path / "manifest-sha512.txt").is_file()
     assert (bag.path / "manifest-md5.txt").is_file()
     assert (bag.path / "manifest-sha1.txt").is_file()
-    assert len(bag.tag_manifests) == 2
-    assert "md5" in bag.tag_manifests and "sha1" in bag.tag_manifests
     assert not (bag.path / "tagmanifest-sha512.txt").is_file()
     assert (bag.path / "tagmanifest-md5.txt").is_file()
     assert (bag.path / "tagmanifest-sha1.txt").is_file()
 
 
-def test_generate_manifests_unknown_algorithm(src, dst):
-    """Test `Bag.generate_manifests` with unknown algorithm."""
+def test_set_manifests_unknown_algorithm(src, dst):
+    """Test `Bag.set_manifests` with unknown algorithm."""
     with pytest.raises(BagItError):
         create_test_bag(src, dst, algorithms=["unknown"])
 

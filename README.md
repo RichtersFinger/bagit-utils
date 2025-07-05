@@ -36,15 +36,15 @@ bag = Bag(Path("path/to/bag"))
 
 # .. some operation that, e.g., adds/removes/changes files in data/ or meta/
 
-bag.generate_manifests()
-bag.generate_tag_manifests()
+bag.set_manifests()
+bag.set_tag_manifests()
 ```
 
 Update bag-info after initialization
 ```python
 bag = Bag(Path("path/to/bag"))
 
-bag.generate_baginfo(
+bag.set_baginfo(
     bag.baginfo | {"AdditionalField": ["value0", "value1"]}
 )
 ```
