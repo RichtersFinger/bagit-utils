@@ -566,20 +566,6 @@ class BagValidator:
     BagIt-validator class mostly based on the BagIt Profiles-project[1]
     (@1.4.0). See this project's README.md [2] for details.
 
-    start TODO: ----------------------
-    add to README
-    * validation of BagIt-Profile-Info skipped
-    * Bag-Info items support regex
-    * no support for fetch.txt (only validation)
-    * no support for serialization
-    * omitting Accept-BagIt-Version is equivalent to version 1.0
-    * Payload/Tag-file-matching for 'Payload-Files-X' and 'Tag-Files-X'
-      rely on `Path.match`
-    * Bag-Info: BagIt-Profile-Identifier is not required
-    * modular approach for custom validation steps
-    * ...
-    end TODO    ----------------------
-
     This validator supports two modes of operation:
     1. instantiate with a profile/profile_src `BagValidator(..)` and run
        repeated validations using that profile via `validate(..)`, or
