@@ -1,3 +1,5 @@
+ ![Tests](https://github.com/RichtersFinger/bagit-utils/actions/workflows/tests.yml/badge.svg?branch=main) ![PyPI - License](https://img.shields.io/pypi/l/bagit-utils) ![GitHub top language](https://img.shields.io/github/languages/top/RichtersFinger/bagit-utils) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/bagit-utils) ![PyPI version](https://badge.fury.io/py/bagit-utils.svg) ![PyPI - Wheel](https://img.shields.io/pypi/wheel/bagit-utils)
+
 # BagItUtils
 
 This repository contains a simple python interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://www.digitalpreservation.gov/documents/bagitspec.pdf).
@@ -165,3 +167,15 @@ In some minor aspects, these validators deviate from the BagIt-profiles specific
 ## Planned additions
 * support for `fetch.txt` (currently validation only)
 * support for Bag-serialization
+
+## Tests
+The project has a high test-coverage.
+To run the tests locally, first install the dependencies
+```
+pip install .
+pip install pytest
+```
+and afterwards run `pytest` with
+```
+pytest -v -s tests
+```
