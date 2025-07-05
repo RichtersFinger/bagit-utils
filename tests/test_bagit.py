@@ -22,9 +22,9 @@ def create_test_bag(
 def test_build_from_simple(src, dst):
     """Test simple use of `Bag.build_from`."""
     bag: Bag = create_test_bag(src, dst, {"BagInfoKey": ["BagInfoValue"]})
-    assert bag.validate_format()[0]
-    assert bag.validate_manifests()[0]
-    assert bag.validate()[0]
+    assert bag.validate_format().valid
+    assert bag.validate_manifests().valid
+    assert bag.validate().valid
 
     # bagit
     assert (bag.path / "bagit.txt").is_file()
@@ -95,7 +95,7 @@ def test_build_from_missing_payload(src, dst):
     """Test building `Bag` for missing payload."""
     (src / "data" / "payload.txt").unlink()
     bag: Bag = create_test_bag(src, dst)
-    assert bag.validate()[0]
+    assert bag.validate().valid
     assert (bag.path / "data").is_dir()
     assert (bag.path / "manifest-sha512.txt").is_file()
 
@@ -105,17 +105,20 @@ def test_update_baginfo_manifests(src, dst):
     bag: Bag = create_test_bag(src, dst)
     assert (bag.path / "bag-info.txt").is_file()
     assert (bag.path / "bag-info.txt").read_bytes().strip() == b""
-    assert bag.validate_manifests()[0]
+    assert bag.validate_manifests().valid
 
     # change baginfo
     bag.generate_baginfo({"BagInfoKey": ["BagInfoValue"]})
     assert b"BagInfoKey" in (bag.path / "bag-info.txt").read_bytes()
-    assert not bag.validate_manifests()[0]
+    report = bag.validate_manifests()
+    assert not report.valid
+    for issue in report.issues:
+        print(f"{issue.level}: {issue.message}")
 
     # update manifests
     bag.generate_manifests()
     bag.generate_tag_manifests()
-    assert bag.validate_manifests()[0]
+    assert bag.validate_manifests().valid
 
 
 def test_baginfo_long_lines(src, dst):
@@ -217,30 +220,42 @@ def test_build_from_create_symlinks(src, dst):
 def test_invalid_missing_bagit(src, dst):
     """Test validation for missing `bagit.txt`."""
     bag: Bag = create_test_bag(src, dst)
-    assert bag.validate()[0]
+    assert bag.validate().valid
     (bag.path / "bagit.txt").unlink()
-    assert not bag.validate()[0]
+    report = bag.validate()
+    assert not report.valid
+    for issue in report.issues:
+        print(f"{issue.level}: {issue.message}")
 
 
 def test_invalid_missing_file(src, dst):
     """Test validation for missing file."""
     bag: Bag = create_test_bag(src, dst)
-    assert bag.validate()[0]
+    assert bag.validate().valid
     (bag.path / "data" / "payload.txt").unlink()
-    assert not bag.validate()[0]
+    report = bag.validate()
+    assert not report.valid
+    for issue in report.issues:
+        print(f"{issue.level}: {issue.message}")
 
 
 def test_invalid_unknown_file(src, dst):
     """Test validation for unknown file."""
     bag: Bag = create_test_bag(src, dst)
-    assert bag.validate()[0]
+    assert bag.validate().valid
     (bag.path / "data" / "payload2.txt").touch()
-    assert not bag.validate()[0]
+    report = bag.validate()
+    assert not report.valid
+    for issue in report.issues:
+        print(f"{issue.level}: {issue.message}")
 
 
 def test_invalid_bad_checksum(src, dst):
-    """Test validation for unknown file."""
+    """Test validation for bad checksum."""
     bag: Bag = create_test_bag(src, dst)
-    assert bag.validate()[0]
+    assert bag.validate().valid
     (bag.path / "data" / "payload.txt").write_bytes(b"different payload")
-    assert not bag.validate()[0]
+    report = bag.validate()
+    assert not report.valid
+    for issue in report.issues:
+        print(f"{issue.level}: {issue.message}")

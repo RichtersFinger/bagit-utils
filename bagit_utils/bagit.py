@@ -13,6 +13,8 @@ from hashlib import (
 )
 from shutil import copytree
 
+from .common import quote_list, Issue, ValidationReport
+
 
 def get_hash(file: Path, method: Callable, block: int) -> str:
     """
@@ -76,10 +78,16 @@ class Bag:
         self._manifests = None
         self._tag_manifests = None
         if load:
-            ok, msg = self.validate_format()
-            if not ok:
+            report = self.validate_format()
+            if not report.valid:
                 raise BagItError(
-                    f"Directory '{path}' is not a valid bag: {msg}"
+                    "Directory is not a valid bag:\n"
+                    + "\n".join(
+                        map(
+                            lambda i: f"* {i.level}: {i.message}",
+                            report.issues,
+                        )
+                    )
                 )
             self.load()
 
@@ -223,56 +231,98 @@ class Bag:
         self.load_manifests()
         self.load_tag_manifests()
 
-    def validate_format(self) -> tuple[bool, str]:
+    def validate_format(self) -> ValidationReport:
         """
         Validates the `Bag`'s format (existence of required files). This
         includes
         * bagit.txt (and its contents)
+        * bag-info.txt (for content-validation, use the profile-based
+          Bag-validator)
         * payload directory
         * at least one payload manifest
 
         and does not include unknown files.
         """
+        result = ValidationReport(True, bag=self)
+
+        # base
         if not self.path.is_dir():
-            return False, f"'{self.path}' is not a directory"
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error", f"'{self.path}' is not a directory.", "Bag-Format"
+                )
+            )
+            return result
         if not (self.path / "bagit.txt").is_file():
-            return False, f"Missing 'bagit.txt' in '{self.path}'"
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error",
+                    f"Missing Bag declaration 'bagit.txt' in '{self.path}'.",
+                    "Bag-Format",
+                )
+            )
+            return result
+
+        # bag-info
         if (
             self.path / "bagit.txt"
         ).read_bytes().strip() != self._BAGIT_TXT.strip():
-            return False, f"Bad Bag declaration in '{self.path}/bagit.txt'"
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error",
+                    f"Bad Bag declaration in '{self.path}/bagit.txt'.",
+                    "Bag-Format",
+                )
+            )
+            return result
+
+        # payload
         if not (self.path / "data").is_dir():
-            return False, f"Missing 'data' directory in '{self.path}'"
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error",
+                    f"Missing 'data' directory in '{self.path}'.",
+                    "Bag-Format",
+                )
+            )
+            return result
+
+        # manifests
         if (
             len([m for m in self.path.glob("manifest-*.txt") if m.is_file()])
             == 0
         ):
-            return (
-                False,
-                f"Missing at least one manifest file in '{self.path}'",
+            result.valid = False
+            result.issues.append(
+                Issue(
+                    "error",
+                    f"Found no manifest file in '{self.path}'.",
+                    "Bag-Format",
+                )
             )
-        for f in self.path.glob("*"):
-            if f.is_dir() and f.name not in ["data", "meta"]:
-                return False, f"Bad directory '{f}' in '{self.path}'"
-            if f.is_file() and f.name not in [
-                "bagit.txt",
-                "bag-info.txt",
-                "manifest-sha1.txt",
-                "manifest-md5.txt",
-                "manifest-sha256.txt",
-                "manifest-sha512.txt",
-                "tagmanifest-sha1.txt",
-                "tagmanifest-md5.txt",
-                "tagmanifest-sha256.txt",
-                "tagmanifest-sha512.txt",
-            ]:
-                return False, f"Bad file '{f}' in '{self.path}'"
+            return result
 
-        return True, ""
+        # special files
+        for f in self.path.glob("*"):
+            if f.is_file() and f.name == "fetch.txt":
+                result.issues.append(
+                    Issue(
+                        "warning",
+                        "This library currently does not support 'fetch.txt' "
+                        + f"(encountered in '{self.path}').",
+                        "Bag-Format",
+                    )
+                )
+
+        return result
 
     def validate_manifests(
         self, algorithm: Optional[str] = None, skip_checksums: bool = False
-    ) -> tuple[bool, str]:
+    ) -> ValidationReport:
         """
         Validates payload and metadata integrity using manifest
         information. If `algorithm` is not given, validate checksums via
@@ -280,24 +330,53 @@ class Bag:
         automatically loaded if not at least one has already been
         loaded. Checksum validation is skipped if `skip_checksums`.
         """
+        result = ValidationReport(True, bag=self)
+
         # load manifests
         if self._manifests is None:
             self.load_manifests()
         if self._tag_manifests is None:
             self.load_tag_manifests()
 
-        # validate manifest inconsistencies by checking neighbors
+        # validate manifest inconsistencies (files that are listed in one but
+        # not others or listed in others but not one) by checking pair-wise
         for m1, m2 in zip(
-            self._manifests.values(), list(self._manifests.values())[1:]
+            self._manifests.items(), list(self._manifests.items())[1:]
         ):
-            if set(m1.keys()) != set(m2.keys()):
-                return False, "Inconsistent manifest information"
+            files_m1 = set(m1[1].keys())
+            files_m2 = set(m2[1].keys())
+            if files_m1 != files_m2:
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        "Found inconsistent records in manifests for "
+                        + f"algorithms '{m1[0]}' and '{m1[0]}' regarding the "
+                        + "file(s) "
+                        + quote_list(files_m1.symmetric_difference(files_m2))
+                        + f" in Bag at '{self.path}'.",
+                        "Bag-Manifests",
+                    )
+                )
         for m1, m2 in zip(
-            self._tag_manifests.values(),
-            list(self._tag_manifests.values())[1:],
+            self._tag_manifests.items(),
+            list(self._tag_manifests.items())[1:],
         ):
-            if set(m1.keys()) != set(m2.keys()):
-                return False, "Inconsistent tag-manifest information"
+            files_m1 = set(m1[1].keys())
+            files_m2 = set(m2[1].keys())
+            if files_m1 != files_m2:
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        "Found inconsistent records in tag-manifests for "
+                        + f"algorithms '{m1[0]}' and '{m1[0]}' regarding the "
+                        + "file(s) "
+                        + quote_list(files_m1.symmetric_difference(files_m2))
+                        + f" in Bag at '{self.path}'.",
+                        "Bag-Manifests",
+                    )
+                )
 
         payload_files = list(
             map(
@@ -305,29 +384,46 @@ class Bag:
                 next((m for m in self._manifests.values()), {}).keys(),
             )
         )
-        meta_files = list(
+        tag_files = list(
             map(
                 lambda f: self.path / f,
                 next((m for m in self._tag_manifests.values()), {}).keys(),
             )
+        ) + list(
+            map(
+                lambda a: self.path / f"tagmanifest-{a}.txt",
+                self._tag_manifests.keys(),
+            )
         )
 
         # validate all files exist
-        for f in payload_files + meta_files:
+        for f in payload_files + tag_files:
             if not f.is_file():
-                return False, f"Missing file '{f}' in '{self.path}'"
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"Missing file '{f.relative_to(self.path)}' in Bag at "
+                        + f"'{self.path}'.",
+                        "Bag-Manifests",
+                    )
+                )
 
         # validate no unknown files exist
-        for f in self.path.glob("data/**/*"):
-            if f.is_file() and f not in payload_files:
-                return False, f"Bad file '{f}' in '{self.path}'"
-
-        for f in self.path.glob("meta/**/*"):
-            if f.is_file() and f not in meta_files:
-                return False, f"Bad file '{f}' in '{self.path}'"
+        for f in self.path.glob("**/*"):
+            if f.is_file() and f not in payload_files + tag_files:
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        f"File '{f.relative_to(self.path)}' in Bag at "
+                        + f"'{self.path}' is not covered by manifests.",
+                        "Bag-Manifests",
+                    )
+                )
 
         if skip_checksums:
-            return True, ""
+            return result
 
         # validate checksums
         for d in [self._manifests, self._tag_manifests]:
@@ -343,27 +439,47 @@ class Bag:
             if _algorithm not in self.CHECKSUM_ALGORITHMS:
                 raise BagItError(f"Unknown checksum algorithm '{_algorithm}'.")
             for f, c in d[_algorithm].items():
+                if not (self.path / f).is_file():
+                    result.issues.append(
+                        Issue(
+                            "info",
+                            f"Skipping checksum validation for file '{f}' in "
+                            + f"Bag at '{self.path}' (file is missing).",
+                            "Bag-Checksums",
+                        )
+                    )
+                    continue
+
                 _c = self._CHECKSUM_METHODS[_algorithm](self.path / f)
                 if c != _c:
-                    return (
-                        False,
-                        f"Bad checksum for '{f}' (expected '{c}' got '{_c}')",
+                    result.valid = False
+                    result.issues.append(
+                        Issue(
+                            "error",
+                            f"Bad '{_algorithm}'-checksum for file '{f}' in "
+                            + f"Bag at '{self.path}' (expected '{c}' but got "
+                            + f"'{_c}').",
+                            "Bag-Checksums",
+                        )
                     )
 
-        return True, ""
+        return result
 
-    def validate(self) -> tuple[bool, str]:
-        """
-        Returns tuple of validity and message (if a problem is
-        detected).
-        """
-        ok, msg = self.validate_format()
-        if not ok:
-            return ok, msg
-        ok, msg = self.validate_manifests()
-        if not ok:
-            return ok, msg
-        return True, ""
+    def validate(self) -> ValidationReport:
+        """Returns validation results."""
+        result = ValidationReport(True, bag=self)
+
+        format_report = self.validate_format()
+        result.issues += format_report.issues
+        if not format_report.valid:
+            result.valid = False
+
+        manifest_report = self.validate_manifests()
+        result.issues += manifest_report.issues
+        if not manifest_report.valid:
+            result.valid = False
+
+        return result
 
     def generate_bagit_declaration(self) -> None:
         """Writes `bagit.txt`."""
@@ -578,8 +694,16 @@ class Bag:
         bag.generate_tag_manifests(algorithms)
 
         if validate:
-            ok, msg = bag.validate()
-            if not ok:
-                raise BagItError(f"Bag validation failed: {msg}")
+            report = bag.validate()
+            if not report.valid:
+                raise BagItError(
+                    "Bag validation failed:\n"
+                    + "\n".join(
+                        map(
+                            lambda i: f"* {i.level}: {i.message}",
+                            report.issues,
+                        )
+                    )
+                )
 
         return bag
