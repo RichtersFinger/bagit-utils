@@ -620,3 +620,56 @@ def test_bag_validator_bag_info(src, dst, profile, callback, ok):
     if not ok:
         for issue in report.issues:
             print(f"{issue.level}: {issue.message}")
+
+
+def test_validator_extension(src, dst):
+    """Test documented validator extension."""
+
+    class MyBagItProfileValidator(BagItProfileValidator):
+        _ACCEPTED_PROPERTIES = BagItProfileValidator._ACCEPTED_PROPERTIES + [
+            "My-Tag"
+        ]
+
+        @classmethod
+        def custom_validation_hook(cls, profile):
+            if "My-Tag" not in profile:
+                raise ValueError(
+                    cls._ERROR_PREFIX + "Missing required tag 'My-Tag'."
+                )
+            cls._handle_type_validation(bool, "My-Tag", profile["My-Tag"])
+
+    with pytest.raises(ValueError):
+        MyBagItProfileValidator.load_profile({})
+    with pytest.raises(ValueError):
+        MyBagItProfileValidator.load_profile({"My-Tag": None})
+
+    from bagit_utils.common import Issue, ValidationReport
+
+    class MyBagValidator(BagValidator):
+        _PROFILE_VALIDATOR = MyBagItProfileValidator
+
+        @classmethod
+        def custom_validation_hook(cls, bag, profile):
+            result = ValidationReport(True)
+            if profile["My-Tag"] and not (bag.path / "my-tag.txt").is_file():
+                result.valid = False
+                result.issues.append(
+                    Issue(
+                        "error",
+                        "Bag must contain tag-file 'my-tag.txt'.",
+                        "My-Tag",
+                    )
+                )
+            return result
+
+    validator = MyBagValidator({"My-Tag": True})
+
+    bag: Bag = create_test_bag(src, dst)
+    report = validator.validate(bag)
+    assert not validator.validate(bag).valid
+    for issue in report.issues:
+        print(f"{issue.level}: {issue.message}")
+
+    (bag.path / "my-tag.txt").touch()
+    report = validator.validate(bag)
+    assert report.valid
