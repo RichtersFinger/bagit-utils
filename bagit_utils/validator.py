@@ -643,7 +643,7 @@ class BagValidator:
         total.issues += partial.issues
 
     @classmethod
-    def validate_baginfo_tag_required(
+    def _validate_baginfo_tag_required(
         cls, tag: str, bag: Bag, tag_profile: Mapping
     ) -> ValidationReport:
         """
@@ -664,7 +664,7 @@ class BagValidator:
         return result
 
     @classmethod
-    def validate_baginfo_tag_repeatable(
+    def _validate_baginfo_tag_repeatable(
         cls, tag: str, bag: Bag, tag_profile: Mapping
     ) -> ValidationReport:
         """
@@ -688,7 +688,7 @@ class BagValidator:
         return result
 
     @classmethod
-    def validate_baginfo_tag_values(
+    def _validate_baginfo_tag_values(
         cls, tag: str, bag: Bag, tag_profile: Mapping
     ) -> ValidationReport:
         """
@@ -714,7 +714,7 @@ class BagValidator:
         return result
 
     @classmethod
-    def validate_baginfo_tag_regex(
+    def _validate_baginfo_tag_regex(
         cls, tag: str, bag: Bag, tag_profile: Mapping
     ) -> ValidationReport:
         """
@@ -740,15 +740,24 @@ class BagValidator:
         return result
 
     @classmethod
+    def _validate_baginfo_custom_tags_hook(
+        # pylint: disable=unused-argument
+        cls, tag: str, bag: Bag, tag_profile: Mapping
+    ) -> ValidationReport:
+        """Hook for custom bag-info validation steps."""
+        return ValidationReport(True)
+
+    @classmethod
     def validate_baginfo(cls, bag: Bag, profile: Mapping) -> ValidationReport:
         """Validate 'Bag-Info'-section of `profile` in `bag`."""
         result = ValidationReport(True)
         for tag, tag_profile in profile.get("Bag-Info", {}).items():
             for v in [
-                cls.validate_baginfo_tag_required,
-                cls.validate_baginfo_tag_repeatable,
-                cls.validate_baginfo_tag_values,
-                cls.validate_baginfo_tag_regex,
+                cls._validate_baginfo_tag_required,
+                cls._validate_baginfo_tag_repeatable,
+                cls._validate_baginfo_tag_values,
+                cls._validate_baginfo_tag_regex,
+                cls._validate_baginfo_custom_tags_hook,
             ]:
                 cls._handle_validation_step(
                     result,
