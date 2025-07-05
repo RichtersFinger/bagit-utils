@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.0] - 2025-07-??
+## [1.0.0] - 2025-07-05
 
 ### Changed
 
@@ -12,6 +12,7 @@
 
 ### Added
 
+- added automated tests
 - added BagIt profile- and Bag-validation functionality
 
 ## [0.1.0] - 2025-06-09
