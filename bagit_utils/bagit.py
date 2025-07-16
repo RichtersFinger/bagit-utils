@@ -11,7 +11,7 @@ from hashlib import (
     sha256 as _sha256,
     sha512 as _sha512,
 )
-from shutil import copytree
+from shutil import copy
 
 from .common import quote_list, Issue, ValidationReport
 
@@ -682,10 +682,10 @@ class Bag:
         validate: bool = True,
     ) -> "Bag":
         """
-        Returns a `Bag` that is built from the payload given in `src` at
-        `dst`. If `create_symlinks`, instead of copying payload files,
-        place symbolic links pointing to the original files in `Bag`'s
-        data-directory.
+        Returns a `Bag` that is built from the contents given in `src`
+        at `dst`. If `create_symlinks`, instead of copying the (payload)
+        contents in `<src>/data`, symbolic links pointing to the
+        original files are placed in the `Bag`'s data/payload-directory.
         """
         # check prerequisites
         if dst.exists() and not dst.is_dir():
@@ -694,16 +694,16 @@ class Bag:
         if next((p for p in dst.glob("**/*")), None) is not None:
             raise BagItError(f"Destination '{dst}' is not empty.")
 
-        # duplicate/link data
-        if (src / "data").is_dir():
-            if create_symlinks:
-                (dst / "data").symlink_to((src / "data").resolve(), True)
+        # duplicate/link data by iterating
+        (dst / "data").mkdir(parents=True)
+        for file in filter(lambda p: p.is_file(), src.glob("**/*")):
+            target_path = dst / file.relative_to(src)
+            if not target_path.parent.is_dir():
+                target_path.parent.mkdir(parents=True)
+            if create_symlinks and (src / "data") in file.parents:
+                target_path.symlink_to(file.resolve(), True)
             else:
-                copytree(src / "data", dst / "data")
-        else:
-            (dst / "data").mkdir()
-        if (src / "meta").is_dir():
-            copytree(src / "meta", dst / "meta")
+                copy(file, target_path)
 
         # generate bag
         bag = cls(dst, False)
