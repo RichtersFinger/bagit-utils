@@ -25,10 +25,13 @@ setup(
     project_urls={"Source": "https://github.com/RichtersFinger/bagit-utils"},
     python_requires=">=3.10",
     install_requires=[],
-    extras_require={},
     packages=[
         "bagit_utils",
     ],
+    extras_require={
+        "cli": ["befehl<1",]
+    },
+    entry_points={"console_scripts": ["bagit = bagit_utils.cli:cli"]},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

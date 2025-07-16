@@ -1,4 +1,3 @@
-
 """Common definitions."""
 
 from typing import Optional, Any
