@@ -1,12 +1,12 @@
 """`bagit-utils`-CLI definition."""
 
-from typing import Optional, Any
+from typing import Optional
 import sys
 from importlib.metadata import version
 from pathlib import Path
 
 try:
-    from befehl import Parser, Option, Cli, Command
+    from befehl import Parser, Option, Cli, Command, common
 except ImportError:
     print(
         "Missing cli-dependencies, please install by entering "
@@ -14,8 +14,12 @@ except ImportError:
     )
     sys.exit(1)
 
+from .bagit import Bag
 
-def parse_dir_exists_but_empty(data: str) -> tuple[bool, Optional[str], Any]:
+
+def parse_dir_exists_but_empty(
+    data: str,
+) -> tuple[bool, Optional[str], Optional[Path]]:
     """
     Parses input as Path, returns ok if path does not exist or is empty.
     """
@@ -27,8 +31,23 @@ def parse_dir_exists_but_empty(data: str) -> tuple[bool, Optional[str], Any]:
     return False, f"Directory '{data}' is not empty", None
 
 
+def parse_baginfo(
+    data: str,
+) -> tuple[bool, Optional[str], Optional[tuple[str, str]]]:
+    """
+    Parses input as tuple of tag-name and value for use in
+    'baginfo-txt'.
+    """
+    try:
+        tag, value = data.split(":", maxsplit=1)
+    except ValueError:
+        return False, f"bad format in baginfo-tag '{data}'", None
+    return True, None, (tag, value)
+
+
 class BuildBag(Command):
     """Subcommand for building bags."""
+
     input_ = Option(
         ("-i", "--input"),
         helptext="source directory that should be converted into a bag",
@@ -44,14 +63,48 @@ class BuildBag(Command):
         nargs=1,
         parser=parse_dir_exists_but_empty,
     )
+    baginfo = Option(
+        ("-b", "--baginfo"),
+        helptext=(
+            "add baginfo-metadata, e.g., "
+            + "\"-b 'My-Tag:value one' -b 'My-Tag:value two'\""
+        ),
+        nargs=-1,
+        parser=parse_baginfo,
+    )
+    checksums = Option(
+        ("-c", "--checksums"),
+        helptext=(
+            "request specific algorithms for calculating checksums; "
+            + f"one or more of {common.quote_list(Bag.CHECKSUM_ALGORITHMS)}"
+        ),
+        nargs=-1,
+        parser=Parser.parse_with_values(Bag.CHECKSUM_ALGORITHMS),
+    )
+    symlinks = Option(
+        "--use-symlinks", helptext="replace payload files by symlinks"
+    )
 
     def run(self, args):
-        # TODO
-        return
+        baginfo = {}
+        for tag, value in args.get(self.baginfo, []):
+            if tag in baginfo:
+                baginfo[tag].append(value)
+            else:
+                baginfo[tag] = [value]
+
+        Bag.build_from(
+            src=args[self.input_][0],
+            dst=args[self.output][0],
+            baginfo=baginfo,
+            algorithms=args.get(self.checksums),
+            create_symlinks=self.symlinks in args,
+        )
 
 
 class ModifyBag(Command):
     """Subcommand for modifying bags."""
+
     input_ = Option(
         ("-i", "--input"),
         helptext="target bag that should be modified",
@@ -66,6 +119,7 @@ class ModifyBag(Command):
 
 class ValidateBag(Command):
     """Subcommand for validating bags."""
+
     input_ = Option(
         ("-i", "--input"),
         helptext="target bag that should be validated",
@@ -80,6 +134,7 @@ class ValidateBag(Command):
 
 class BagItUtilsCli(Cli):
     """CLI for `bagit-utils`."""
+
     build_ = BuildBag("build", helptext="build bags from directory")
     modify = ModifyBag("modify", helptext="alter existing bags")
     validate_ = ValidateBag("validate", helptext="validate existing bags")
@@ -99,5 +154,5 @@ cli = BagItUtilsCli(
     helptext=(
         f"bagit-utils-cli, v{version('bagit-utils')}"
         + " - Build, modify, and validate BagIt bags"
-    )
+    ),
 ).build()

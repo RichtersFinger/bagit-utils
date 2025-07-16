@@ -29,7 +29,7 @@ setup(
         "bagit_utils",
     ],
     extras_require={
-        "cli": ["befehl<1",]
+        "cli": ["befehl>=0.1.2,<1.0.0",]
     },
     entry_points={"console_scripts": ["bagit = bagit_utils.cli:cli"]},
     classifiers=[
