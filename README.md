@@ -173,7 +173,7 @@ The project has a high test-coverage.
 To run the tests locally, first install the dependencies
 ```
 pip install .
-pip install pytest
+pip install -r dev-requirements.txt
 ```
 and afterwards run `pytest` with
 ```
