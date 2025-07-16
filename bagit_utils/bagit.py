@@ -12,6 +12,7 @@ from hashlib import (
     sha512 as _sha512,
 )
 from shutil import copy
+import re
 
 from .common import quote_list, Issue, ValidationReport
 
@@ -71,6 +72,7 @@ class Bag:
         "sha512": sha512,
     }
     _BAGIT_TXT = b"BagIt-Version: 1.0\nTag-File-Character-Encoding: UTF-8\n"
+    _TAG_MANIFEST_PATTERN = re.compile("tagmanifest-.*.txt")
 
     def __init__(self, path: Path, load: bool = False) -> None:
         self.path = path
@@ -621,12 +623,12 @@ class Bag:
         for a in algorithms:
             self._tag_manifests[a] = {
                 str(f.relative_to(self.path)): self._CHECKSUM_METHODS[a](f)
-                for f in chain(
-                    self.path.glob("meta/**/*"),
-                    self.path.glob("manifest-*.txt"),
-                    [self.path / "bag-info.txt", self.path / "bagit.txt"],
+                for f in self.path.glob("**/*")
+                if (
+                    f.is_file()
+                    and (self.path / "data") not in f.parents
+                    and not self._TAG_MANIFEST_PATTERN.fullmatch(f.name)
                 )
-                if f.is_file()
             }
 
         if not write_to_disk:
