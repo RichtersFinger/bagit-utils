@@ -271,11 +271,11 @@ class Bag:
         if (
             self.path / "bagit.txt"
         ).read_bytes().strip() != self._BAGIT_TXT.strip():
-            result.valid = False
             result.issues.append(
                 Issue(
-                    "error",
-                    f"Bad Bag declaration in '{self.path}/bagit.txt'.",
+                    "warning",
+                    f"Bad Bag declaration in '{self.path}/bagit.txt' (likely "
+                    + "caused by an incompatible version).",
                     "Bag-Format",
                 )
             )
