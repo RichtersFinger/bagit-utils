@@ -84,23 +84,42 @@ class BuildBag(Command):
     symlinks = Option(
         "--use-symlinks", helptext="replace payload files by symlinks"
     )
+    verbose = Option(("-v", "--verbose"), helptext="verbose output")
 
     def run(self, args):
+        verbose = self.verbose in args
+
         baginfo = {}
         for tag, value in args.get(self.baginfo, []):
+            if verbose:
+                print(f"Adding tag '{tag}: {value}' to 'bag-info.txt'.")
             if tag in baginfo:
                 baginfo[tag].append(value)
             else:
                 baginfo[tag] = [value]
 
-        Bag.build_from(
+        bag = Bag.build_from(
             src=args[self.input_][0],
             dst=args[self.output][0],
             baginfo=baginfo,
             algorithms=args.get(self.checksums),
             create_symlinks=self.symlinks in args,
+            validate=False,
         )
 
+        if verbose:
+            print(
+                "Generated manifests with algorithm(s): "
+                + common.quote_list(bag.manifests.keys())
+            )
+
+        report = bag.validate()
+        if not report.valid:
+            if verbose:
+                print(report)
+            sys.exit(1)
+        elif verbose:
+            print(f"Bag successfully built at '{bag.path}'.")
 
 class ModifyBag(Command):
     """Subcommand for modifying bags."""
