@@ -4,6 +4,7 @@ from typing import Optional
 import sys
 from importlib.metadata import version
 from pathlib import Path
+import re
 
 try:
     from befehl import Parser, Option, Cli, Command, common
@@ -138,6 +139,50 @@ def parse_as_bag(
     return True, None, bag
 
 
+class InspectBag(Command):
+    """Subcommand for inspecting bags."""
+
+    input_ = Option(
+        ("-i", "--input"),
+        helptext="target bag that should be inspected",
+        nargs=1,
+        parser=parse_as_bag,
+    )
+
+    def run(self, args):
+        bag: Bag = args[self.input_][0]
+
+        print(
+            "BagIt-version: "
+            + re.search(
+                r"BagIt-Version: (\d\.\d)",
+                (bag.path / "bagit.txt").read_text(encoding="utf-8"),
+            ).group(1)
+        )
+        print("Manifest(s): " + common.quote_list(bag.manifests.keys()))
+        print("Tag-manifest(s): " + common.quote_list(bag.tag_manifests.keys()))
+
+        print("Contents of 'bag-info.txt':")
+        for tag, values in bag.baginfo.items():
+            print(f" {tag}:")
+            for value in values:
+                print(f"  - {value}")
+
+        if len(bag.manifests) == 0:
+            print("There is no payload manifest.")
+        else:
+            print("Bag payload:")
+            for file in next(iter(bag.manifests.values())).keys():
+                print(f" - {file}")
+
+        if len(bag.tag_manifests) == 0:
+            print("There is no tag-manifest.")
+        else:
+            print("Tag-files:")
+            for file in next(iter(bag.tag_manifests.values())).keys():
+                print(f" - {file}")
+
+
 class ModifyBag(Command):
     """Subcommand for modifying bags."""
 
@@ -251,6 +296,7 @@ class BagItUtilsCli(Cli):
     """CLI for `bagit-utils`."""
 
     build_ = BuildBag("build", helptext="build bags from directory")
+    inspect = InspectBag("inspect", helptext="inspect existing bags")
     modify = ModifyBag("modify", helptext="alter existing bags")
     validate_ = ValidateBag("validate", helptext="validate existing bags")
 
@@ -268,6 +314,6 @@ cli = BagItUtilsCli(
     "bagit",
     helptext=(
         f"bagit-utils-cli, v{version('bagit-utils')}"
-        + " - Build, modify, and validate BagIt bags"
+        + " - Build, inspect, modify, and validate BagIt bags"
     ),
 ).build()
