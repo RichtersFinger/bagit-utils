@@ -220,10 +220,31 @@ def test_build_from_create_symlinks(src, dst):
     bag_w: Bag = create_test_bag(src, dst / "w", create_symlinks=True)
     bag_wo: Bag = create_test_bag(src, dst / "wo", create_symlinks=False)
 
-    assert (bag_w.path / "data").is_symlink()
+    for file in filter(
+        lambda p: p.is_file(), (bag_w.path / "data").glob("**/*")
+    ):
+        assert file.is_symlink()
+    for file in filter(
+        lambda p: p.is_file(), (bag_wo.path / "data").glob("**/*")
+    ):
+        assert not file.is_symlink()
+
+    # does not affect other files
+    for file in filter(
+        lambda p: (bag_wo.path / "data") not in p.parents,
+        bag_wo.path.glob("**/*")
+    ):
+        assert not file.is_symlink()
+    for file in filter(
+        lambda p: (bag_w.path / "data") not in p.parents,
+        bag_w.path.glob("**/*")
+    ):
+        assert not file.is_symlink()
+
+    # does not affect checksum-generation
     assert (
         bag_w.manifests == bag_wo.manifests
-    )  # does not affect checksum-generation
+    )
 
 
 def test_invalid_missing_bagit(src, dst):

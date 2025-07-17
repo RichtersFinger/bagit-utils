@@ -2,7 +2,7 @@
 
 # BagItUtils
 
-This repository contains a simple python interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://www.digitalpreservation.gov/documents/bagitspec.pdf).
+This repository contains a python library along with a command line interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://www.digitalpreservation.gov/documents/bagitspec.pdf).
 It implements most but not all of the specification (see [planned additions](#planned-additions)).
 The package consists of two major modules:
 * `bagit`: basic support for the BagIt-spec including parsing (meta-)data and validating structure as well as checksums
@@ -10,7 +10,42 @@ The package consists of two major modules:
 
 Please refer to the [examples-section](#basic-usage-examples) for a brief overwiew of the features.
 
+Key features of this repository are
+* a modern, extendable, and easy to use API,
+* a high test-coverage, and
+* a command line interface.
+
+## Install
+Install this package by entering
+```
+pip install bagit-utils
+```
+It is generally recommended to install in a virtual environment, create and activate said environment by entering for example
+```
+python3 -m venv venv
+source venv/bin/activate
+```
+
 ## Basic usage examples
+
+### CLI
+This package provides a command line interface (via the [`befehl`-library](https://github.com/RichtersFinger/befehl)) if installed with the extra-dependency `"cli"`:
+```
+pip install bagit-utils[cli]
+```
+
+After installing, the CLI can be invoked with `bagit`.
+The CLI provides options for the creation, inspection, modification, and validation of Bags.
+
+You can also activate autocomplete for (the current session of) bash-terminals with
+```
+eval "$(_BEFEHL_COMPLETION= bagit --generate-autocomplete)"
+```
+If you want to set up persistent autocomplete, instead generate the source file via
+```
+_BEFEHL_COMPLETION= bagit --generate-autocomplete
+```
+and place the contents of that script in your `~/.bash_autocomplete`-file.
 
 ### BagIt
 
@@ -173,7 +208,7 @@ The project has a high test-coverage.
 To run the tests locally, first install the dependencies
 ```
 pip install .
-pip install pytest
+pip install -r dev-requirements.txt
 ```
 and afterwards run `pytest` with
 ```

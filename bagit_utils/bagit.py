@@ -4,14 +4,14 @@ from typing import Optional, Mapping, Iterable, Callable
 from datetime import datetime
 from pathlib import Path
 from functools import reduce, partial
-from itertools import chain
 from hashlib import (
     md5 as _md5,
     sha1 as _sha1,
     sha256 as _sha256,
     sha512 as _sha512,
 )
-from shutil import copytree
+from shutil import copy
+import re
 
 from .common import quote_list, Issue, ValidationReport
 
@@ -71,6 +71,7 @@ class Bag:
         "sha512": sha512,
     }
     _BAGIT_TXT = b"BagIt-Version: 1.0\nTag-File-Character-Encoding: UTF-8\n"
+    _TAG_MANIFEST_PATTERN = re.compile("tagmanifest-.*.txt")
 
     def __init__(self, path: Path, load: bool = False) -> None:
         self.path = path
@@ -81,7 +82,8 @@ class Bag:
             report = self.validate_format()
             if not report.valid:
                 raise BagItError(
-                    "Directory is not a valid bag:\n"
+                    f"Directory '{path}' is not a valid bag:"
+                    + "\n"
                     + "\n".join(
                         map(
                             lambda i: f"* {i.level}: {i.message}",
@@ -269,11 +271,11 @@ class Bag:
         if (
             self.path / "bagit.txt"
         ).read_bytes().strip() != self._BAGIT_TXT.strip():
-            result.valid = False
             result.issues.append(
                 Issue(
-                    "error",
-                    f"Bad Bag declaration in '{self.path}/bagit.txt'.",
+                    "warning",
+                    f"Bad Bag declaration in '{self.path}/bagit.txt' (likely "
+                    + "caused by an incompatible version).",
                     "Bag-Format",
                 )
             )
@@ -621,12 +623,12 @@ class Bag:
         for a in algorithms:
             self._tag_manifests[a] = {
                 str(f.relative_to(self.path)): self._CHECKSUM_METHODS[a](f)
-                for f in chain(
-                    self.path.glob("meta/**/*"),
-                    self.path.glob("manifest-*.txt"),
-                    [self.path / "bag-info.txt", self.path / "bagit.txt"],
+                for f in self.path.glob("**/*")
+                if (
+                    f.is_file()
+                    and (self.path / "data") not in f.parents
+                    and not self._TAG_MANIFEST_PATTERN.fullmatch(f.name)
                 )
-                if f.is_file()
             }
 
         if not write_to_disk:
@@ -682,10 +684,10 @@ class Bag:
         validate: bool = True,
     ) -> "Bag":
         """
-        Returns a `Bag` that is built from the payload given in `src` at
-        `dst`. If `create_symlinks`, instead of copying payload files,
-        place symbolic links pointing to the original files in `Bag`'s
-        data-directory.
+        Returns a `Bag` that is built from the contents given in `src`
+        at `dst`. If `create_symlinks`, instead of copying the (payload)
+        contents in `<src>/data`, symbolic links pointing to the
+        original files are placed in the `Bag`'s data/payload-directory.
         """
         # check prerequisites
         if dst.exists() and not dst.is_dir():
@@ -694,16 +696,16 @@ class Bag:
         if next((p for p in dst.glob("**/*")), None) is not None:
             raise BagItError(f"Destination '{dst}' is not empty.")
 
-        # duplicate/link data
-        if (src / "data").is_dir():
-            if create_symlinks:
-                (dst / "data").symlink_to((src / "data").resolve(), True)
+        # duplicate/link data by iterating
+        (dst / "data").mkdir(parents=True)
+        for file in filter(lambda p: p.is_file(), src.glob("**/*")):
+            target_path = dst / file.relative_to(src)
+            if not target_path.parent.is_dir():
+                target_path.parent.mkdir(parents=True)
+            if create_symlinks and (src / "data") in file.parents:
+                target_path.symlink_to(file.resolve(), True)
             else:
-                copytree(src / "data", dst / "data")
-        else:
-            (dst / "data").mkdir()
-        if (src / "meta").is_dir():
-            copytree(src / "meta", dst / "meta")
+                copy(file, target_path)
 
         # generate bag
         bag = cls(dst, False)
