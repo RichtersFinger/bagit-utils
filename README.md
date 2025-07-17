@@ -2,13 +2,18 @@
 
 # BagItUtils
 
-This repository contains a simple python and command line interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://www.digitalpreservation.gov/documents/bagitspec.pdf).
+This repository contains a python library along with a command line interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://www.digitalpreservation.gov/documents/bagitspec.pdf).
 It implements most but not all of the specification (see [planned additions](#planned-additions)).
 The package consists of two major modules:
 * `bagit`: basic support for the BagIt-spec including parsing (meta-)data and validating structure as well as checksums
 * `validator`: an implementation of the [BagIt Profiles-project](https://bagit-profiles.github.io/bagit-profiles-specification)'s (1.4) specification for extended Bag validation; takes a modular approach for easy customization (see [details](#validator-customization))
 
 Please refer to the [examples-section](#basic-usage-examples) for a brief overwiew of the features.
+
+Key features of this repository are
+* a modern, extendable, and easy to use API,
+* a high test-coverage, and
+* a command line interface.
 
 ## Install
 Install this package by entering

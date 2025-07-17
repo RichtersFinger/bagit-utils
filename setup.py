@@ -13,9 +13,12 @@ except FileNotFoundError:
 
 
 setup(
-    version=os.environ.get("VERSION", "1.0.0"),
+    version=os.environ.get("VERSION", "1.1.0"),
     name="bagit-utils",
-    description="simple python interface for creating and interacting with files in the BagIt-format",
+    description=(
+        "python library and command line interface for creating and "
+        + "interacting with files in the BagIt-format"
+    ),
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Steffen Richters-Finger",

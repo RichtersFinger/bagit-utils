@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0] - 2025-07-17
+
+### Changed
+
+- relaxed Bag-declaration validation error to warning
+- when building Bags with symlinks, link files instead of payload-directory
+
+### Added
+
+- added initial cli based on `befehl`
+
+### Fixed
+
+- fixed Bag-creation not considering all tag-files while building manifests
+
 ## [1.0.0] - 2025-07-05
 
 ### Changed
