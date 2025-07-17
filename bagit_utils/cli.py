@@ -14,7 +14,7 @@ except ImportError:
     )
     sys.exit(1)
 
-from .bagit import Bag
+from .bagit import Bag, BagItError
 
 
 def parse_dir_exists_but_empty(
@@ -121,6 +121,23 @@ class BuildBag(Command):
         elif verbose:
             print(f"Bag successfully built at '{bag.path}'.")
 
+
+def parse_as_bag(
+    data: str,
+) -> tuple[bool, Optional[str], Optional[Bag]]:
+    """Parses `data` as `Bag`."""
+    ok, msg, path = Parser.parse_as_dir(data)
+    if not ok:
+        return ok, msg, path
+
+    try:
+        bag = Bag(path, True)
+    except BagItError as exc_info:
+        return False, str(exc_info), None
+
+    return True, None, bag
+
+
 class ModifyBag(Command):
     """Subcommand for modifying bags."""
 
@@ -128,12 +145,91 @@ class ModifyBag(Command):
         ("-i", "--input"),
         helptext="target bag that should be modified",
         nargs=1,
-        parser=Parser.parse_as_dir,
+        parser=parse_as_bag,
     )
+    add_tag = Option(
+        ("-a", "--add-tag"),
+        helptext=(
+            "add baginfo-metadata, e.g., \"-a 'My-Tag:value one' "
+            + "-a 'My-Tag:value two'\""
+        ),
+        nargs=-1,
+        parser=parse_baginfo,
+    )
+    delete_tag = Option(
+        ("-d", "--delete-tag"),
+        helptext=(
+            "delete all values of given tag(s), e.g., \"-d My-Tag\""
+        ),
+        nargs=-1,
+    )
+    checksums = Option(
+        ("-c", "--checksums"),
+        helptext=(
+            "rebuild bag manifests with the given algorithms; "
+            + f"one or more of {common.quote_list(Bag.CHECKSUM_ALGORITHMS)}; "
+            + "if no values provided, renew current checksums"
+        ),
+        nargs=-1,
+        parser=Parser.parse_with_values(Bag.CHECKSUM_ALGORITHMS),
+    )
+    verbose = Option(("-v", "--verbose"), helptext="verbose output")
 
     def run(self, args):
-        # TODO
-        return
+        bag: Bag = args[self.input_][0]
+        renew_checksums = self.checksums in args
+        verbose = self.verbose in args
+
+        # baginfo
+        if self.delete_tag in args or self.add_tag in args:
+            renew_checksums = True
+
+            if verbose and self.delete_tag in args:
+                print(
+                    "Removing tags from 'bag-info.txt': "
+                    + common.quote_list(args[self.delete_tag])
+                )
+
+            # filter deleted
+            new_baginfo = {
+                k: v
+                for k, v in bag.baginfo.items()
+                if k not in args.get(self.delete_tag, [])
+            }
+
+            # add new
+            for tag, value in args.get(self.add_tag, []):
+                if verbose:
+                    print(f"Adding tag '{tag}: {value}' to 'bag-info.txt'.")
+                if tag in new_baginfo:
+                    new_baginfo[tag].append(value)
+                else:
+                    new_baginfo[tag] = [value]
+            bag.set_baginfo(new_baginfo)
+
+        # checksums
+        if renew_checksums:
+            manifests = args.get(self.checksums, bag.manifests.keys())
+            tag_manifests = args.get(self.checksums, bag.tag_manifests.keys())
+
+            if verbose:
+                print(
+                    "Refreshing manifest(s): " + common.quote_list(manifests)
+                )
+            bag.set_manifests(
+                args.get(self.checksums, bag.manifests.keys())
+            )
+
+            if verbose:
+                print(
+                    "Refreshing tag-manifest(s): "
+                    + common.quote_list(tag_manifests)
+                )
+            bag.set_tag_manifests(
+                args.get(self.checksums, bag.tag_manifests.keys())
+            )
+
+        bag.validate()
 
 
 class ValidateBag(Command):
