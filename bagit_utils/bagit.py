@@ -4,7 +4,6 @@ from typing import Optional, Mapping, Iterable, Callable
 from datetime import datetime
 from pathlib import Path
 from functools import reduce, partial
-from itertools import chain
 from hashlib import (
     md5 as _md5,
     sha1 as _sha1,
@@ -83,7 +82,8 @@ class Bag:
             report = self.validate_format()
             if not report.valid:
                 raise BagItError(
-                    "Directory is not a valid bag:\n"
+                    f"Directory '{path}' is not a valid bag:"
+                    + "\n"
                     + "\n".join(
                         map(
                             lambda i: f"* {i.level}: {i.message}",

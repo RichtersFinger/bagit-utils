@@ -34,3 +34,20 @@ class ValidationReport:
     valid: Optional[bool] = None
     issues: list[Issue] = field(default_factory=list)
     bag: Optional[Any] = None  # instance of Bag
+
+    def __str__(self):
+        if self.valid:
+            verdict = "valid"
+        else:
+            verdict = "invalid"
+
+        return (
+            f"Bag '{self.bag.path}' is {verdict}"
+            + (":\n" if len(self.issues) > 0 else ".")
+            + "\n".join(
+                map(
+                    lambda i: f"* {i.level}: {i.message}",
+                    self.issues,
+                )
+            )
+        )

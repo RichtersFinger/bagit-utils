@@ -16,6 +16,7 @@ except ImportError:
     sys.exit(1)
 
 from .bagit import Bag, BagItError
+from .validator import BagValidator
 
 
 def parse_dir_exists_but_empty(
@@ -284,12 +285,34 @@ class ValidateBag(Command):
         ("-i", "--input"),
         helptext="target bag that should be validated",
         nargs=1,
-        parser=Parser.parse_as_dir,
+        parser=parse_as_bag,
     )
+    profile = Option(
+        ("-p", "--profile"),
+        nargs=1,
+        helptext="BagIt-profile for extended validation",
+    )
+    verbose = Option(("-v", "--verbose"), helptext="verbose output")
 
     def run(self, args):
-        # TODO
-        return
+        bag: Bag = args[self.input_][0]
+        verbose = self.verbose in args
+
+        report = bag.validate()
+
+        if self.profile in args:
+            report_extended = BagValidator.validate_once(
+                bag, profile_src=args[self.profile][0]
+            )
+            if not report_extended.valid:
+                report.valid = False
+            report.issues.extend(report_extended.issues)
+
+        if verbose:
+            print(report)
+
+        if not report.valid:
+            sys.exit(1)
 
 
 class BagItUtilsCli(Cli):
