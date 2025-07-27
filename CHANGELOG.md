@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1] - 2025-07-27
+
+### Fixed
+
+- fixed `Bag.tag_manifests`-property loading wrong data on initial call
+
 ## [1.1.0] - 2025-07-17
 
 ### Changed
