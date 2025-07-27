@@ -111,7 +111,7 @@ class Bag:
     def tag_manifests(self) -> dict[str, dict[str, str]]:
         """Returns tag-manifests. Loads data if not loaded previously."""
         if self._tag_manifests is None:
-            self.load_manifests()
+            self.load_tag_manifests()
         return self._tag_manifests
 
     def load_baginfo(self) -> dict[str, list[str]]:

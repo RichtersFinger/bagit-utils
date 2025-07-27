@@ -91,6 +91,18 @@ def test_build_from_simple(src, dst):
     assert not (bag.path / "meta").is_dir()
 
 
+def test_bag_init_without_load(src, dst):
+    """
+    Test dynamically loading `Bag`-information if not loaded in
+    constructor.
+    """
+    bag = Bag(create_test_bag(src, dst).path, load=False)
+
+    assert bag.baginfo is not None
+    assert bag.manifests is not None
+    assert bag.tag_manifests is not None
+
+
 def test_build_from_missing_payload(src, dst):
     """Test building `Bag` for missing payload."""
     (src / "data" / "payload.txt").unlink()
