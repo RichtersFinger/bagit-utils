@@ -37,7 +37,7 @@ setup(
     },
     entry_points={"console_scripts": ["bagit = bagit_utils.cli:cli"]},
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries",
         "Topic :: Communications :: File Sharing",
