@@ -605,7 +605,8 @@ class Bag:
                 f.unlink()
         for a, m in self._manifests.items():
             (self.path / f"manifest-{a}.txt").write_text(
-                "\n".join(f"{c} {f}" for f, c in m.items()) + "\n",
+                "\n".join(f"{c} {f}" for f, c in m.items())
+                + ("\n" if len(m) > 0 else ""),
                 encoding="utf-8",
             )
 

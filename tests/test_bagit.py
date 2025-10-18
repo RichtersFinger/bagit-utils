@@ -94,6 +94,23 @@ def test_build_from_simple(src, dst):
     assert not (bag.path / "meta").is_dir()
 
 
+def test_build_from_without_payload(src, dst):
+    """
+    Test manifest-creation via method `Bag.build_from` for no payload.
+    """
+    # delete payload generated from fixture
+    for p in (src / "data").glob("*"):
+        if p.is_file():
+            p.unlink()
+
+    # build
+    bag = Bag.build_from(src, dst, {}, algorithms=["md5"], validate=False)
+
+    # check manifest
+    manifest = (bag.path / "manifest-md5.txt").read_bytes()
+    assert manifest == b""
+
+
 def test_bag_init_without_load(src, dst):
     """
     Test dynamically loading `Bag`-information if not loaded in
@@ -247,19 +264,17 @@ def test_build_from_create_symlinks(src, dst):
     # does not affect other files
     for file in filter(
         lambda p: (bag_wo.path / "data") not in p.parents,
-        bag_wo.path.glob("**/*")
+        bag_wo.path.glob("**/*"),
     ):
         assert not file.is_symlink()
     for file in filter(
         lambda p: (bag_w.path / "data") not in p.parents,
-        bag_w.path.glob("**/*")
+        bag_w.path.glob("**/*"),
     ):
         assert not file.is_symlink()
 
     # does not affect checksum-generation
-    assert (
-        bag_w.manifests == bag_wo.manifests
-    )
+    assert bag_w.manifests == bag_wo.manifests
 
 
 def test_invalid_missing_bagit(src, dst):
