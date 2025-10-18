@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0] - 2025-10-18
+
+### Added
+
+- added hooks for custom `Bag`-loading and -validation
+
+### Fixed
+
+- fixed additional newline in manifest files if payload-directory is empty
+- fixed references to BagIt-spec referring to a draft of the spec
+
 ## [1.1.1] - 2025-07-27
 
 ### Fixed
