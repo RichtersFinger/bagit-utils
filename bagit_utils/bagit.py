@@ -1,6 +1,6 @@
 """BagIt-module."""
 
-from typing import Optional, Mapping, Iterable, Callable
+from typing import Optional, Mapping, Iterable, Callable, Any
 from datetime import datetime
 from pathlib import Path
 from functools import reduce, partial
@@ -227,11 +227,19 @@ class Bag:
             if a in (algorithms or self.CHECKSUM_ALGORITHMS)
         }
 
+    def custom_load_hook(self) -> Any:
+        """Hook for custom steps during load."""
+
     def load(self) -> None:
         """Load bag-info and all manifest-data from disk."""
         self.load_baginfo()
         self.load_manifests()
         self.load_tag_manifests()
+        self.custom_load_hook()
+
+    def custom_validate_format_hook(self) -> ValidationReport:
+        """Hook for custom steps during format validation."""
+        return ValidationReport(True, bag=self)
 
     def validate_format(self) -> ValidationReport:
         """
@@ -319,6 +327,12 @@ class Bag:
                         "Bag-Format",
                     )
                 )
+
+        # custom
+        custom_validation_report = self.custom_validate_format_hook()
+        result.issues += custom_validation_report.issues
+        if not custom_validation_report.valid:
+            result.valid = False
 
         return result
 
@@ -467,6 +481,10 @@ class Bag:
 
         return result
 
+    def custom_validate_hook(self) -> ValidationReport:
+        """Hook for custom steps during validation."""
+        return ValidationReport(True, bag=self)
+
     def validate(self) -> ValidationReport:
         """Returns validation results."""
         result = ValidationReport(True, bag=self)
@@ -479,6 +497,11 @@ class Bag:
         manifest_report = self.validate_manifests()
         result.issues += manifest_report.issues
         if not manifest_report.valid:
+            result.valid = False
+
+        custom_validation_report = self.custom_validate_hook()
+        result.issues += custom_validation_report.issues
+        if not custom_validation_report.valid:
             result.valid = False
 
         return result

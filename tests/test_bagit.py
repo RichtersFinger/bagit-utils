@@ -1,8 +1,11 @@
 """Test module for `bagit.py`."""
 
+from json import loads
+
 import pytest
 
 from bagit_utils import Bag, BagItError
+from bagit_utils.common import ValidationReport, Issue
 
 
 def create_test_bag(
@@ -301,3 +304,42 @@ def test_invalid_bad_checksum(src, dst):
     assert not report.valid
     for issue in report.issues:
         print(f"{issue.level}: {issue.message}")
+
+
+def test_custom_validate_and_load_hooks(src, dst):
+    """Test hooks for validating and loading (README example)."""
+    bag: Bag = create_test_bag(src, dst)
+
+    class CustomBag(Bag):
+        def custom_load_hook(self):
+            self.bag_json = loads((self.path / "bag.json").read_bytes())
+
+        def custom_validate_format_hook(self):
+            report = ValidationReport(True, bag=self)
+
+            if not (self.path / "bag.json").is_file():
+                report.valid = False
+                report.issues.append(
+                    Issue(
+                        "error",
+                        f"Missing file 'bag.json' in Bag at '{self.path}'.",
+                        "bag.json",
+                    )
+                )
+
+            return report
+
+    custom_bag = CustomBag(bag.path)
+
+    report = custom_bag.validate_format()
+    assert not report.valid
+    for issue in report.issues:
+        print(f"{issue.level}: {issue.message}")
+
+    (bag.path / "bag.json").write_bytes(b'{"a":"b"}')
+
+    assert custom_bag.validate_format().valid
+    custom_bag.load()
+
+    assert hasattr(custom_bag, "bag_json")
+    assert custom_bag.bag_json == {"a": "b"}
