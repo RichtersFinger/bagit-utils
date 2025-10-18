@@ -2,7 +2,7 @@
 
 # BagItUtils
 
-This repository contains a python library along with a command line interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://www.digitalpreservation.gov/documents/bagitspec.pdf).
+This repository contains a python library along with a command line interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://datatracker.ietf.org/doc/html/rfc8493).
 It implements most but not all of the specification (see [planned additions](#planned-additions)).
 The package consists of two major modules:
 * `bagit`: basic support for the BagIt-spec including parsing (meta-)data and validating structure as well as checksums
@@ -114,6 +114,53 @@ report = bag.validate()
 ```
 The report that is returned contains an overall flag for validity and a list of detected issues.
 For more advanced validation, see also the following section on [Profile-Validation](#bagit-profile-validation).
+
+#### Customization
+This section shows a simple example on how to extend the `Bag` class with custom loading- and validation-features.
+
+Suppose `Bag`s are expected to always contain a specific tag-file `bag.json` and the contents of this file should be available after instantiating a `Bag`.
+
+To achieve this behavior, both the loading and validation can be hooked via the methods
+* `custom_load_hook`,
+* `custom_validate_format_hook`, and
+* `custom_validate_hook`.
+
+The updated loading for a corresponding `CustomBag`-class could then be defined as follows:
+```python
+from json import loads
+from bagit_utils import Bag
+
+class CustomBag(Bag):
+    def custom_load_hook(self):
+        self.bag_json = loads((self.path / "bag.json").read_bytes())
+```
+
+Similarly, the required validation can be implemented as:
+```python
+from bagit_utils.common import ValidationReport, Issue
+
+class CustomBag(Bag):
+    def custom_load_hook(self):
+        ...
+
+    def custom_validate_format_hook(self):
+        report = ValidationReport(True, bag=self)
+
+        if not (self.path / "bag.json").is_file():
+            report.valid = False
+            report.issues.append(
+                Issue(
+                    "error",
+                    f"Missing file 'bag.json' in Bag at '{self.path}'.",
+                    "bag.json",
+                )
+            )
+
+        # additional validation steps
+        # ...
+
+        return report
+```
 
 ### BagIt-profile validation
 The `bagit_utils.validator`-module consists of two classes that can be used for advanced `Bag`-validation and is based on the [BagIt Profiles-project](https://bagit-profiles.github.io/bagit-profiles-specification) (1.4).
