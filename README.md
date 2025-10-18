@@ -2,7 +2,7 @@
 
 # BagItUtils
 
-This repository contains a python library along with a command line interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://www.digitalpreservation.gov/documents/bagitspec.pdf).
+This repository contains a python library along with a command line interface for creating, interacting with, and validating files in the [BagIt-format (v1.0)](https://datatracker.ietf.org/doc/html/rfc8493).
 It implements most but not all of the specification (see [planned additions](#planned-additions)).
 The package consists of two major modules:
 * `bagit`: basic support for the BagIt-spec including parsing (meta-)data and validating structure as well as checksums

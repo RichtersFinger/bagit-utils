@@ -59,7 +59,7 @@ class Bag:
             (default False)
 
     References:
-    [1] https://www.digitalpreservation.gov/documents/bagitspec.pdf
+    [1] https://datatracker.ietf.org/doc/html/rfc8493
     """
 
     # should always reflect algorithm security in increasing order
