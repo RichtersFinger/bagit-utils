@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from setuptools import setup
 
+
 try:
     long_description = (Path(__file__).parent / "README.md").read_text(
         encoding="utf8"
@@ -13,7 +14,7 @@ except FileNotFoundError:
 
 
 setup(
-    version=os.environ.get("VERSION", "1.1.1"),
+    version=os.environ.get("VERSION", "1.2.0"),
     name="bagit-utils",
     description=(
         "python library and command line interface for creating and "
