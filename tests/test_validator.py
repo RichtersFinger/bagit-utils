@@ -423,7 +423,7 @@ def test_bag_validator_tag_files_allowed(src, dst, profile, callback, ok):
             lambda bag: None,
             True,
         ),
-        (
+        (  # file required
             {"Payload-Files-Required": ["data/payload1.txt"]},
             lambda bag: None,
             False,
@@ -431,6 +431,33 @@ def test_bag_validator_tag_files_allowed(src, dst, profile, callback, ok):
         (
             {"Payload-Files-Required": ["data/payload1.txt"]},
             lambda bag: (bag.path / "data" / "payload1.txt").touch(),
+            True,
+        ),
+        (  # directory required
+            {"Payload-Files-Required": ["data/dir/"]},
+            lambda bag: None,
+            False,
+        ),
+        (
+            {"Payload-Files-Required": ["data/dir/"]},
+            lambda bag: (bag.path / "data" / "dir").mkdir(),
+            False,
+        ),
+        (
+            {"Payload-Files-Required": ["data/dir/"]},
+            lambda bag: [
+                (bag.path / "data" / "dir").mkdir(),
+                (bag.path / "data" / "dir" / ".keep").touch(),
+            ],
+            True,
+        ),
+        (
+            {"Payload-Files-Required": ["data/dir/"]},
+            lambda bag: [
+                (bag.path / "data" / "dir").mkdir(),
+                (bag.path / "data" / "dir" / "a").mkdir(),
+                (bag.path / "data" / "dir" / "a" / ".keep").touch(),
+            ],
             True,
         ),
     ],

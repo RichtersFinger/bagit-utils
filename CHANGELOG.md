@@ -1,5 +1,11 @@
 # Changelog
 
+## [] - ...
+
+### Fixed
+
+- fixed `BagValidator` not respecting directories in 'Payload-Files-Required'
+
 ## [1.2.0] - 2025-10-18
 
 ### Added
