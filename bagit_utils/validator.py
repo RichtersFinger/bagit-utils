@@ -465,11 +465,26 @@ class BagItProfileValidator:
         )
         if "Tag-Files-Required" not in profile:
             return
-        bad_files = [
-            f
-            for f in profile["Tag-Files-Required"]
-            if not any(Path(f).match(p) for p in profile["Tag-Files-Allowed"])
-        ]
+
+        bad_files = []
+        for path_raw, path in zip(
+            profile["Tag-Files-Required"],
+            map(Path, profile["Tag-Files-Required"]),
+        ):
+            ok = False
+            for p in profile["Tag-Files-Allowed"]:
+                # check for glob-patterns
+                if path.match(p) or any(fp.match(p) for fp in path.parents):
+                    ok = True
+                    break
+                # check for implicit inclusion (an allowed pattern
+                # 'meta/a/* should cover a required 'meta/a/')
+                if path_raw.endswith("/") and p.startswith(path_raw):
+                    ok = True
+                    break
+            if not ok:
+                bad_files.append(path)
+
         if bad_files:
             raise ValueError(
                 cls._ERROR_PREFIX
@@ -504,13 +519,26 @@ class BagItProfileValidator:
         )
         if "Payload-Files-Required" not in profile:
             return
-        bad_files = [
-            f
-            for f in profile["Payload-Files-Required"]
-            if not any(
-                Path(f).match(p) for p in profile["Payload-Files-Allowed"]
-            )
-        ]
+
+        bad_files = []
+        for path_raw, path in zip(
+            profile["Payload-Files-Required"],
+            map(Path, profile["Payload-Files-Required"]),
+        ):
+            ok = False
+            for p in profile["Payload-Files-Allowed"]:
+                # check for glob-patterns
+                if path.match(p) or any(fp.match(p) for fp in path.parents):
+                    ok = True
+                    break
+                # check for implicit inclusion (an allowed pattern
+                # 'data/a/* should cover a required 'data/a/')
+                if path_raw.endswith("/") and p.startswith(path_raw):
+                    ok = True
+                    break
+            if not ok:
+                bad_files.append(path)
+
         if bad_files:
             raise ValueError(
                 cls._ERROR_PREFIX
