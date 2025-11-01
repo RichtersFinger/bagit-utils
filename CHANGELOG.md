@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2] - 2025-11-01
+
+### Fixed
+
+- improved pattern matching during profile validation in `BagItProfileValidator` of 'Tag-Files-Allowed'/'Tag-Files-Required' and 'Payload-Files-Allowed'/'Payload-Files-Required'
+- fixed `BagValidator` not respecting directories in 'Payload-Files-Required'
+
 ## [1.2.0] - 2025-10-18
 
 ### Added

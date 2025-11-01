@@ -134,6 +134,55 @@ def create_test_bag(src, dst, baginfo=None, algorithms=None) -> Bag:
             },
             False,
         ),
+        (
+            {
+                "Tag-Files-Required": ["meta/dir/"],
+                "Tag-Files-Allowed": ["meta/dir/*"],
+            },
+            True,
+        ),
+        (
+            {
+                "Tag-Files-Required": ["meta/dir/"],
+                "Tag-Files-Allowed": ["meta/dir/**"],
+            },
+            True,
+        ),
+        (
+            {
+                "Tag-Files-Required": ["meta/dir/"],
+                "Tag-Files-Allowed": ["meta/dir/a/*"],
+            },
+            True,
+        ),
+        (
+            {
+                "Tag-Files-Required": ["meta/dir/0"],
+                "Tag-Files-Allowed": ["meta/dir/[0-9]"],
+            },
+            True,
+        ),
+        (
+            {
+                "Tag-Files-Required": ["meta/dir/a"],
+                "Tag-Files-Allowed": ["meta/dir/[0-9]"],
+            },
+            False,
+        ),
+        (
+            {
+                "Tag-Files-Required": ["meta/a"],
+                "Tag-Files-Allowed": ["meta/*/*"],
+            },
+            False,
+        ),
+        (
+            {
+                "Tag-Files-Required": ["meta/a/b"],
+                "Tag-Files-Allowed": ["meta/*/*"],
+            },
+            True,
+        ),
         ({"Payload-Files-Required": None}, False),
         ({"Payload-Files-Allowed": None}, False),
         ({"Payload-Files-Required": []}, True),
@@ -163,9 +212,65 @@ def create_test_bag(src, dst, baginfo=None, algorithms=None) -> Bag:
         (
             {
                 "Payload-Files-Required": ["any/file"],
-                "Payload-Files-Allowed": ["meta/*"],
+                "Payload-Files-Allowed": ["data/*"],
             },
             False,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["data/dir/"],
+                "Payload-Files-Allowed": ["data/dir/*"],
+            },
+            True,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["data/dir/"],
+                "Payload-Files-Allowed": ["data/dir/**"],
+            },
+            True,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["data/dir/"],
+                "Payload-Files-Allowed": ["data/dir/a/*"],
+            },
+            True,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["data/dir/"],
+                "Payload-Files-Allowed": ["data/dir/[0-9]"],
+            },
+            True,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["data/dir/0"],
+                "Payload-Files-Allowed": ["data/dir/[0-9]"],
+            },
+            True,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["data/dir/a"],
+                "Payload-Files-Allowed": ["data/dir/[0-9]"],
+            },
+            False,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["data/a"],
+                "Payload-Files-Allowed": ["data/*/*"],
+            },
+            False,
+        ),
+        (
+            {
+                "Payload-Files-Required": ["data/a/b"],
+                "Payload-Files-Allowed": ["data/*/*"],
+            },
+            True,
         ),
     ],
 )
@@ -423,7 +528,7 @@ def test_bag_validator_tag_files_allowed(src, dst, profile, callback, ok):
             lambda bag: None,
             True,
         ),
-        (
+        (  # file required
             {"Payload-Files-Required": ["data/payload1.txt"]},
             lambda bag: None,
             False,
@@ -431,6 +536,33 @@ def test_bag_validator_tag_files_allowed(src, dst, profile, callback, ok):
         (
             {"Payload-Files-Required": ["data/payload1.txt"]},
             lambda bag: (bag.path / "data" / "payload1.txt").touch(),
+            True,
+        ),
+        (  # directory required
+            {"Payload-Files-Required": ["data/dir/"]},
+            lambda bag: None,
+            False,
+        ),
+        (
+            {"Payload-Files-Required": ["data/dir/"]},
+            lambda bag: (bag.path / "data" / "dir").mkdir(),
+            False,
+        ),
+        (
+            {"Payload-Files-Required": ["data/dir/"]},
+            lambda bag: [
+                (bag.path / "data" / "dir").mkdir(),
+                (bag.path / "data" / "dir" / ".keep").touch(),
+            ],
+            True,
+        ),
+        (
+            {"Payload-Files-Required": ["data/dir/"]},
+            lambda bag: [
+                (bag.path / "data" / "dir").mkdir(),
+                (bag.path / "data" / "dir" / "a").mkdir(),
+                (bag.path / "data" / "dir" / "a" / ".keep").touch(),
+            ],
             True,
         ),
     ],

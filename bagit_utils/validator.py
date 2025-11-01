@@ -465,11 +465,26 @@ class BagItProfileValidator:
         )
         if "Tag-Files-Required" not in profile:
             return
-        bad_files = [
-            f
-            for f in profile["Tag-Files-Required"]
-            if not any(Path(f).match(p) for p in profile["Tag-Files-Allowed"])
-        ]
+
+        bad_files = []
+        for path_raw, path in zip(
+            profile["Tag-Files-Required"],
+            map(Path, profile["Tag-Files-Required"]),
+        ):
+            ok = False
+            for p in profile["Tag-Files-Allowed"]:
+                # check for glob-patterns
+                if path.match(p) or any(fp.match(p) for fp in path.parents):
+                    ok = True
+                    break
+                # check for implicit inclusion (an allowed pattern
+                # 'meta/a/* should cover a required 'meta/a/')
+                if path_raw.endswith("/") and p.startswith(path_raw):
+                    ok = True
+                    break
+            if not ok:
+                bad_files.append(path)
+
         if bad_files:
             raise ValueError(
                 cls._ERROR_PREFIX
@@ -504,13 +519,26 @@ class BagItProfileValidator:
         )
         if "Payload-Files-Required" not in profile:
             return
-        bad_files = [
-            f
-            for f in profile["Payload-Files-Required"]
-            if not any(
-                Path(f).match(p) for p in profile["Payload-Files-Allowed"]
-            )
-        ]
+
+        bad_files = []
+        for path_raw, path in zip(
+            profile["Payload-Files-Required"],
+            map(Path, profile["Payload-Files-Required"]),
+        ):
+            ok = False
+            for p in profile["Payload-Files-Allowed"]:
+                # check for glob-patterns
+                if path.match(p) or any(fp.match(p) for fp in path.parents):
+                    ok = True
+                    break
+                # check for implicit inclusion (an allowed pattern
+                # 'data/a/* should cover a required 'data/a/')
+                if path_raw.endswith("/") and p.startswith(path_raw):
+                    ok = True
+                    break
+            if not ok:
+                bad_files.append(path)
+
         if bad_files:
             raise ValueError(
                 cls._ERROR_PREFIX
@@ -1112,20 +1140,47 @@ class BagValidator:
         if profile.get("Payload-Files-Required") is None:
             return result
 
-        for file in map(
-            lambda f: bag.path / f, profile["Payload-Files-Required"]
+        for raw_path, path in zip(
+            profile["Payload-Files-Required"],
+            map(lambda f: bag.path / f, profile["Payload-Files-Required"]),
         ):
-            if not file.is_file():
-                result.valid = False
-                result.issues.append(
-                    Issue(
-                        "error",
-                        "Missing required payload-file "
-                        + f"'{Path(file).relative_to(bag.path)}' in Bag at "
-                        + f"'{bag.path}'.",
-                        "Payload-Files-Required",
+            if raw_path.endswith("/"):
+                if not path.is_dir():
+                    # existence
+                    result.valid = False
+                    result.issues.append(
+                        Issue(
+                            "error",
+                            "Missing required payload-directory "
+                            + f"'{Path(path).relative_to(bag.path)}' in Bag "
+                            + f"at '{bag.path}'.",
+                            "Payload-Files-Required",
+                        )
                     )
-                )
+                elif len(list(filter(Path.is_file, path.glob("**/*")))) == 0:
+                    # a directory-tree MUST contain at least one file
+                    result.valid = False
+                    result.issues.append(
+                        Issue(
+                            "error",
+                            "Required payload-directory "
+                            + f"'{Path(path).relative_to(bag.path)}' in Bag "
+                            + f"at '{bag.path}' does not contain any files.",
+                            "Payload-Files-Required",
+                        )
+                    )
+            else:
+                if not path.is_file():
+                    result.valid = False
+                    result.issues.append(
+                        Issue(
+                            "error",
+                            "Missing required payload-file "
+                            + f"'{Path(path).relative_to(bag.path)}' in Bag "
+                            + f"at '{bag.path}'.",
+                            "Payload-Files-Required",
+                        )
+                    )
         return result
 
     @classmethod
