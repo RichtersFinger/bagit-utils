@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.3] - 2025-11-10
+
+### Fixed
+
+- fixed bad formatting when writing `bag-info.txt` with emty tag
+
+  skip tag instead of writing an empty line
+
 ## [1.2.2] - 2025-11-01
 
 ### Fixed

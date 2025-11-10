@@ -549,7 +549,7 @@ class Bag:
                     "\n".join(
                         [self._format_baginfo_multiline(k, v_) for v_ in v]
                     )
-                    for k, v in baginfo.items()
+                    for k, v in baginfo.items() if len(v) > 0
                 ]
                 + [""]
             ),

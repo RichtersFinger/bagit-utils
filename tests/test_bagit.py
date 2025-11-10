@@ -180,6 +180,21 @@ def test_baginfo_long_lines(src, dst):
     assert bag.load_baginfo()["B"][0] == "another short line a b"
 
 
+def test_baginfo_empty_tag(src, dst):
+    """Test baginfo writing with an empty tag in baginfo-dict."""
+    bag: Bag = create_test_bag(
+        src,
+        dst,
+        {
+            "A": ["not empty"],
+            "B": [],
+            "C": ["also not empty"],
+        },
+    )
+
+    assert b"\n\n" not in (bag.path / "bag-info.txt").read_bytes()
+
+
 def test_build_from_algorithms(src, dst):
     """Test `Bag.build_from` with specific algorithms."""
     bag: Bag = create_test_bag(src, dst, algorithms=["md5", "sha1"])
