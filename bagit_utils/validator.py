@@ -1,6 +1,6 @@
 """BagIt-profile validator definition."""
 
-from typing import Mapping, Optional
+from typing import Iterable, Mapping, Optional
 from urllib.request import urlopen
 from pathlib import Path
 from json import load, loads
@@ -1187,26 +1187,81 @@ class BagValidator:
     def validate_payload_files_allowed(
         cls, bag: Bag, profile: Mapping
     ) -> ValidationReport:
-        """Validate 'Payload-Files-Allowed'-section of `profile` in `bag`."""
+        """Validate 'Payload-Files-Allowed'-section of `profile` in `bag`.
+
+        - If 'Payload-Files-Allowed' is missing/None -> valid (no restrictions).
+        - Each entry is a path (relative to bag base) or a glob pattern where
+          '*' matches zero or more characters (glob(7)-style).
+        - Entries ending with '/*' are treated as "this directory and everything
+          beneath it" (recursive).
+        """
         result = ValidationReport(True)
-        if profile.get("Payload-Files-Allowed") is None:
+
+        allowed_patterns = profile.get("Payload-Files-Allowed")
+        if allowed_patterns is None:
             return result
 
-        for file in [f for f in bag.path.glob("data/**/*") if f.is_file()]:
-            if not any(
-                file.relative_to(bag.path).match(p)
-                for p in profile["Payload-Files-Allowed"]
-            ):
+        allowed_matchers = cls._compile_payload_allowed_matchers(
+            allowed_patterns
+        )
+
+        for file in (
+            f for f in bag.path.glob("data/**/*") if f.is_file()
+        ):
+            rel_posix = file.relative_to(bag.path).as_posix()
+
+            if not any(m(rel_posix) for m in allowed_matchers):
                 result.valid = False
                 result.issues.append(
                     Issue(
                         "error",
-                        f"Payload file '{Path(file).relative_to(bag.path)}' in"
-                        + f" Bag at '{bag.path}' is not allowed.",
+                        (
+                            f"Payload file '{rel_posix}' in Bag at "
+                            f"'{bag.path}' is not allowed."
+                        ),
                         "Payload-Files-Allowed",
                     )
                 )
+
         return result
+
+    @staticmethod
+    def _compile_payload_allowed_matchers(
+        patterns: Iterable[str],
+    ):
+        """Create match functions for each allowed pattern.
+
+        - pattern ending in '/*' allows the directory itself and anything below
+          it (recursive).
+        - otherwise use pathlib.Path.match for glob(ish) matching on the full
+          relative path.
+        """
+        matchers = []
+
+        for pattern in patterns:
+            if pattern.endswith("/*"):
+                dir_pattern = pattern[:-2].rstrip("/")
+
+                def matches(
+                        rel_posix: str,
+                        dir_pattern: str = dir_pattern,
+                        ) -> bool:
+                    rel_path = Path(rel_posix)
+                    return any(
+                        parent.match(dir_pattern)
+                        for parent in rel_path.parents
+                        )
+                matchers.append(matches)
+            else:
+                def matches(
+                    rel_posix: str,
+                    pattern=pattern,
+                ) -> bool:
+                    return Path(rel_posix).match(pattern)
+
+                matchers.append(matches)
+
+        return matchers
 
     @classmethod
     def custom_validation_hook(
