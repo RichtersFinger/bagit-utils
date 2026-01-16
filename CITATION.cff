@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: BagItUtils
+abstract: A python package that allows to create, modify, and validate BagIt Bags.
+url: 'https://github.com/RichtersFinger/bagit-utils'
+message: If you use this software, please cite it as below.
+type: software
+authors:
+  - given-names: Steffen
+    family-names: Richters-Finger
+    orcid: 0000-0003-2080-4949
+    email: srichters@uni-muenster.de
+    website: 'https://github.com/RichtersFinger'
+  - given-names: Stephan
+    family-names: Lenartz
+    email: lenartz@ub.uni-koeln.de
+    affiliation: University and City Library of Cologne
+keywords:
+  - BagIt
+  - BagIt-profiles
+  - python
+  - tools
+license: MIT
