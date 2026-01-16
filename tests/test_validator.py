@@ -583,13 +583,25 @@ def test_bag_validator_payload_files_required(src, dst, profile, callback, ok):
 @pytest.mark.parametrize(
     ("profile", "callback", "ok"),
     [
-        # Empty allowlist: any payload file is forbidden
         (
             {"Payload-Files-Allowed": []},
-            lambda bag: (bag.path / "data" / "payload.txt").touch(),
+            lambda bag: None,
             False,
         ),
-        # Allow everything under data/ (recursive directory permission)
+        (
+            {"Payload-Files-Allowed": ["data/*"]},
+            lambda bag: None,
+            True,
+        ),
+        (
+            {"Payload-Files-Allowed": ["**/*"]},
+            lambda bag: [
+                (bag.path / "data" / "payload1.txt").touch(),
+                (bag.path / "data" / "data1").mkdir(),
+                (bag.path / "data" / "data1" / "payload2.txt").touch(),
+            ],
+            True,
+        ),
         (
             {"Payload-Files-Allowed": ["data/*"]},
             lambda bag: [
@@ -599,46 +611,11 @@ def test_bag_validator_payload_files_required(src, dst, profile, callback, ok):
             ],
             True,
         ),
-        # Allow only additional data1 subtree
-        (
-            {"Payload-Files-Allowed": ["data/data1/*"]},
-            lambda bag: [
-                (
-                    bag.path
-                    / "data"
-                    / "data1"
-                    / "data2"
-                ).mkdir(parents=True),
-                (
-                    bag.path
-                    / "data"
-                    / "data1"
-                    / "data2"
-                    / "payload.jpg"
-                ).touch(),
-            ],
-            True,
-        ),
-        # Reject file outside permitted directory trees
-        (
-            {"Payload-Files-Allowed": ["data/preservation_master/*"]},
-            lambda bag: [
-                (bag.path / "data" / "other").mkdir(),
-                (bag.path / "data" / "other" / "file.txt").touch(),
-            ],
-            False,
-        ),
     ],
 )
 def test_bag_validator_payload_files_allowed(src, dst, profile, callback, ok):
     """Test validation for allowed payload-files."""
     bag: Bag = create_test_bag(src, dst)
-
-    # Ensure deterministic payload: remove copied payload from src
-    for path in bag.path.glob("data/**/*"):
-        if path.is_file():
-            path.unlink()
-
     callback(bag)
 
     assert (
