@@ -1193,10 +1193,19 @@ class BagValidator:
             return result
 
         for file in [f for f in bag.path.glob("data/**/*") if f.is_file()]:
-            if not any(
-                file.relative_to(bag.path).match(p)
-                for p in profile["Payload-Files-Allowed"]
-            ):
+            match = False
+            for p in profile["Payload-Files-Allowed"]:
+                # regular pattern matching
+                if file.relative_to(bag.path).match(p):
+                    match = True
+                    break
+                # capture sub-directories like data/a/b/c if pattern is given
+                # in the format data/a/*
+                if p.endswith("/*"):
+                    if Path(p[:-2]) in file.relative_to(bag.path).parents:
+                        match = True
+                        break
+            if not match:
                 result.valid = False
                 result.issues.append(
                     Issue(
