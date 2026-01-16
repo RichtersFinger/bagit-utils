@@ -609,7 +609,7 @@ def test_bag_validator_payload_files_required(src, dst, profile, callback, ok):
                 (bag.path / "data" / "data1").mkdir(),
                 (bag.path / "data" / "data1" / "payload2.txt").touch(),
             ],
-            False,
+            True,
         ),
     ],
 )

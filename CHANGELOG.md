@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.4] - 2026-01-16
+
+### Fixed
+
+- fixed bad handling of `"Payload-Files-Allowed"`-patterns ending on `"/*"`
+
+  patterns of this type now cover all contents in the base-path recursively
+
 ## [1.2.3] - 2025-11-10
 
 ### Fixed
