@@ -1,30 +1,57 @@
 SHELL := /bin/bash
-VENV := venv
-VERSION =
-INSTALLNAME := bagItUtils
+PWD := ${shell pwd}
+UID ?= $(shell id -u)
+GID ?= $(shell id -g)
 
-_:
-	echo "Missing target."
+PYTHON_CONTAINER_NAME := bagit-utils-dev
+PYTHON_CONTAINER_START := docker run --rm -t -d \
+	-v "${PWD}:${PWD}" \
+	-w "${PWD}" \
+	-e PYTHONUSERBASE=/tmp/docker-python-base \
+	-e PIP_NO_CACHE_DIR=true \
+	--user $(UID):$(GID) \
+	--name ${PYTHON_CONTAINER_NAME} \
+	python:3.12.13-alpine@sha256:aa679aa4eed6eb56c1dc6ad3f1b98b7d2d788fd961596779d188fdedad97fb38 \
+	sleep infinity
+PYTHON_CONTAINER_RUNNING := docker ps -q -f name=$(PYTHON_CONTAINER_NAME)
+PYTHON_SHELL := docker exec -it ${PYTHON_CONTAINER_NAME}
 
-venv:
-	[ -d "${VENV}" ] || python3 -m venv venv
+up:
+	@if [ -z "$$(${PYTHON_CONTAINER_RUNNING})" ]; then \
+		$(PYTHON_CONTAINER_START) > /dev/null; \
+		until [ -n "$$($(PYTHON_CONTAINER_RUNNING))" ]; do printf "."; sleep 0.2; done; \
+		echo " Ready."; \
+	fi
+
+down:
+	@if [ -n "$$($(PYTHON_CONTAINER_RUNNING))" ]; then \
+		docker kill $(PYTHON_CONTAINER_NAME); \
+	fi
+
+shell: up
+	${PYTHON_SHELL} sh
+
+install: up
+	${PYTHON_SHELL} pip install .
 
 test:
 	python3 -m unittest discover tests/
 
-build-dist: venv
-	[ "${VERSION}" != "" ] && \
-		VERSIONENV="VERSION=${VERSION}" || \
-		echo "Using default version"
-	source "${VENV}/bin/activate" && \
-		pip install --upgrade pip wheel setuptools && \
-		${VERSIONENV} python3 setup.py sdist bdist_wheel || \
-		python3 setup.py sdist bdist_wheel
+build-dist: up
+	${PYTHON_SHELL} sh -c "pip install wheel==0.47.0 setuptools==82.0.1 && python3 setup.py sdist bdist_wheel"
 
-publish: venv
-	source "${VENV}/bin/activate" && \
-		pip install --upgrade pip twine && \
-		python3 -m twine upload dist/*
+publish: up
+	${PYTHON_SHELL} sh -c "pip install --upgrade pip twine==6.2.0 && python3 -m twine upload dist/*"
 
 clean:
-	git clean -dfX
+	@echo "The following files/directories will be permanently removed:"
+	@git clean -dfXn
+	@echo "--------------------------------------------------"
+	@read -p "Are you sure you want to proceed? [y/N]: " ans; \
+	if [ "$$ans" = "y" ] || [ "$$ans" = "Y" ]; then \
+		git clean -dfX; \
+		echo "Cleanup complete."; \
+	else \
+		echo "Cleanup aborted."; \
+		exit 1; \
+	fi
