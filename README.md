@@ -252,12 +252,7 @@ In some minor aspects, these validators deviate from the BagIt-profiles specific
 
 ## Tests
 The project has a high test-coverage.
-To run the tests locally, first install the dependencies
+To run the tests locally, enter
 ```
-pip install .
-pip install -r dev-requirements.txt
-```
-and afterwards run `pytest` with
-```
-pytest -v -s tests
+python3 -m unittest discover tests/
 ```
