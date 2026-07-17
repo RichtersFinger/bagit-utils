@@ -14,7 +14,7 @@ except FileNotFoundError:
 
 
 setup(
-    version=os.environ.get("VERSION", "1.2.4"),
+    version="1.2.5",
     name="bagit-utils",
     description=(
         "python library and command line interface for creating and "
