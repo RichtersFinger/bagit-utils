@@ -9,11 +9,8 @@ _:
 venv:
 	[ -d "${VENV}" ] || python3 -m venv venv
 
-test: venv
-	source "${VENV}/bin/activate" && \
-		pip install . && \
-		pip install pytest && \
-		pytest
+test:
+	python3 -m unittest discover tests/
 
 build-dist: venv
 	[ "${VERSION}" != "" ] && \
